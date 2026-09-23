@@ -57,8 +57,7 @@
 
   document.querySelectorAll('[data-type-card]').forEach(card => {
     const input = card.querySelector('input');
-    card.addEventListener('click', (e) => {
-      if (e.target !== input) input.checked = !input.checked;
+    input.addEventListener('change', () => {
       card.classList.toggle('selected', input.checked);
     });
   });
