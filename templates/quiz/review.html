@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Review — Smart Test Platform{% endblock %}
+{% block content %}
+<div class="history-wrap">
+  <h1>{{ session.subject.icon }} {{ session.subject.name }} — Review</h1>
+  <p class="lead">Score: {{ session.score }} / {{ session.total_questions }} ({{ session.percentage }}%)</p>
+
+  {% for row in rows %}
+    <div class="panel review-item {% if row.is_correct %}correct{% else %}incorrect{% endif %}">
+      <div class="review-status {% if row.is_correct %}correct{% else %}incorrect{% endif %}">
+        {% if row.is_correct %}✔ Correct{% else %}✘ Incorrect{% endif %} · {{ row.type_label }}
+      </div>
+      <div class="question-prompt" style="font-size:1.05rem;margin-bottom:10px;">{{ row.question.prompt }}</div>
+      <div><strong>Your answer:</strong> {{ row.your_answer }}</div>
+      {% if not row.is_correct %}
+        <div><strong>Correct answer:</strong> {{ row.correct_answer }}</div>
+      {% endif %}
+      {% if row.question.explanation %}
+        <div class="review-explanation">{{ row.question.explanation }}</div>
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  <div class="setup-footer">
+    <a href="{% url 'history' %}" class="btn btn-ghost">Back to History</a>
+    <a href="{% url 'quiz_setup' %}" class="btn btn-primary">Take Another Test</a>
+  </div>
+</div>
+{% endblock %}

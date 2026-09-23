@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Generating your test — Smart Test Platform{% endblock %}
+{% block content %}
+<div class="generating-wrap">
+  <div class="spinner-3d"></div>
+  <h2 id="gen-headline">Conjuring your questions…</h2>
+  <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  <div class="progress-label" id="progress-label">Starting up…</div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const sessionId = {{ session.id }};
+  const batchUrl = "{% url 'generate_batch' session.id %}";
+  const takeUrl = "{% url 'quiz_take' session.id %}";
+
+  function getCookie(name) {
+    const match = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return match ? match.pop() : '';
+  }
+
+  const fill = document.getElementById('progress-fill');
+  const label = document.getElementById('progress-label');
+
+  async function pump() {
+    try {
+      const res = await fetch(batchUrl, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+      });
+      if (!res.ok && res.status !== 502) throw new Error('Request failed');
+      const data = await res.json();
+
+      if (data.failed) {
+        label.textContent = "Couldn't reach the AI. Please try again in a moment.";
+        document.getElementById('gen-headline').textContent = 'Generation failed';
+        return;
+      }
+
+      const pct = data.target ? Math.round((data.generated / data.target) * 100) : 0;
+      fill.style.width = pct + '%';
+      label.textContent = `${data.generated} / ${data.target} questions ready`;
+
+      if (data.done) {
+        label.textContent = 'Done! Loading your test…';
+        setTimeout(() => { window.location.href = takeUrl; }, 500);
+      } else {
+        pump();
+      }
+    } catch (err) {
+      label.textContent = 'Connection hiccup, retrying…';
+      setTimeout(pump, 1500);
+    }
+  }
+
+  pump();
+</script>
+{% endblock %}

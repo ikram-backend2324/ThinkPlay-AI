@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}New Test — Smart Test Platform{% endblock %}
+{% block content %}
+<div class="setup-wrap">
+  <h1>Build your test</h1>
+  <p class="lead">Choose a subject, how many questions you want, and which interactive formats the AI should use.</p>
+
+  <form method="post" id="setup-form">
+    {% csrf_token %}
+
+    <div class="section-title">1. Subject</div>
+    <div class="subject-grid">
+      {% for subject in subjects %}
+        <label class="subject-card" data-subject-card>
+          <input type="radio" name="subject" value="{{ subject.id }}" required>
+          <span class="icon">{{ subject.icon }}</span>
+          <span class="name">{{ subject.name }}</span>
+        </label>
+      {% endfor %}
+    </div>
+
+    <div class="section-title">2. How many questions?</div>
+    <div class="count-row">
+      <input type="range" id="count-range" min="{{ min_questions }}" max="{{ max_questions }}" value="20" step="1">
+      <input type="number" name="count" id="count-number" min="{{ min_questions }}" max="{{ max_questions }}" value="20" style="width:90px">
+      <span class="count-display" id="count-display">20</span>
+    </div>
+
+    <div class="section-title">3. Interactive formats — pick at least 2 (no boring multiple choice here)</div>
+    <div class="type-grid">
+      {% for t in interaction_types %}
+        <label class="type-card" data-type-card>
+          <input type="checkbox" name="interaction_types" value="{{ t.code }}">
+          <span class="icon">{{ t.icon }}</span>
+          <div class="label">{{ t.label }}</div>
+          <div class="desc">{{ t.description }}</div>
+        </label>
+      {% endfor %}
+    </div>
+
+    <div class="setup-footer">
+      <button type="submit" class="btn btn-primary" id="setup-submit">Generate My Test →</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.querySelectorAll('[data-subject-card]').forEach(card => {
+    const input = card.querySelector('input');
+    input.addEventListener('change', () => {
+      document.querySelectorAll('[data-subject-card]').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+    });
+  });
+
+  document.querySelectorAll('[data-type-card]').forEach(card => {
+    const input = card.querySelector('input');
+    card.addEventListener('click', (e) => {
+      if (e.target !== input) input.checked = !input.checked;
+      card.classList.toggle('selected', input.checked);
+    });
+  });
+
+  const range = document.getElementById('count-range');
+  const number = document.getElementById('count-number');
+  const display = document.getElementById('count-display');
+  range.addEventListener('input', () => { number.value = range.value; display.textContent = range.value; });
+  number.addEventListener('input', () => {
+    let v = Math.max({{ min_questions }}, Math.min({{ max_questions }}, Number(number.value) || {{ min_questions }}));
+    range.value = v;
+    display.textContent = v;
+  });
+  document.getElementById('setup-form').addEventListener('submit', (e) => {
+    const checked = document.querySelectorAll('input[name="interaction_types"]:checked').length;
+    if (checked < 2) {
+      e.preventDefault();
+      alert('Pick at least 2 interactive formats.');
+      return;
+    }
+    document.getElementById('setup-submit').disabled = true;
+    document.getElementById('setup-submit').textContent = 'Starting…';
+  });
+
+  if (window.gsap) {
+    gsap.from('.setup-wrap h1', { y: 20, opacity: 0, duration: 0.6 });
+    gsap.from('.subject-card', { y: 16, opacity: 0, duration: 0.5, stagger: 0.03, delay: 0.15 });
+  }
+</script>
+{% endblock %}

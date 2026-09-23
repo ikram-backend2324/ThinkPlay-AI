@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}History — Smart Test Platform{% endblock %}
+{% block content %}
+<div class="history-wrap">
+  <h1>Your history</h1>
+  {% if sessions %}
+    {% for s in sessions %}
+      <a class="panel history-row" href="{% url 'quiz_review' s.id %}">
+        <span class="icon">{{ s.subject.icon }}</span>
+        <span class="meta">
+          <div class="subj">{{ s.subject.name }} · {{ s.total_questions }} questions</div>
+          <div class="date">{{ s.completed_at|date:"M d, Y H:i" }}</div>
+        </span>
+        <span class="history-score">{{ s.percentage }}%</span>
+      </a>
+    {% endfor %}
+  {% else %}
+    <div class="panel empty-state">
+      <p>No completed tests yet.</p>
+      <a href="{% url 'quiz_setup' %}" class="btn btn-primary">Start your first test</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

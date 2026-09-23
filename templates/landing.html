@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Smart Test Platform — AI-Powered Interactive Tests{% endblock %}
+{% block content %}
+<section class="hero" id="hero">
+  <h1>Tests that actually feel alive.</h1>
+  <p>Pick a subject, tell the AI how many questions you want, and solve them your way —
+     drag, match, slide, and type your way through instead of clicking the same four boxes.</p>
+  <div class="hero-actions">
+    {% if user.is_authenticated %}
+      <a href="{% url 'quiz_setup' %}" class="btn btn-primary">Start a Test</a>
+    {% else %}
+      <a href="{% url 'register' %}" class="btn btn-primary">Create Free Account</a>
+      <a href="{% url 'login' %}" class="btn btn-ghost">I already have one</a>
+    {% endif %}
+  </div>
+  <div class="hero-badges">
+    <span class="badge">🔗 Drag &amp; Drop Matching</span>
+    <span class="badge">🔢 Sequence Ordering</span>
+    <span class="badge">🎚️ Numeric Sliders</span>
+    <span class="badge">💻 Code Completion</span>
+    <span class="badge">🧩 Multi-Select</span>
+    <span class="badge">✏️ Fill in the Blank</span>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  if (window.gsap) {
+    gsap.from("#hero h1", { y: 30, opacity: 0, duration: 0.9, ease: "power3.out" });
+    gsap.from("#hero p", { y: 20, opacity: 0, duration: 0.9, delay: 0.15, ease: "power3.out" });
+    gsap.from(".hero-actions .btn", { y: 20, opacity: 0, duration: 0.7, delay: 0.3, stagger: 0.1, ease: "power3.out" });
+    gsap.from(".hero-badges .badge", { y: 14, opacity: 0, duration: 0.6, delay: 0.5, stagger: 0.06, ease: "power2.out" });
+  }
+</script>
+{% endblock %}

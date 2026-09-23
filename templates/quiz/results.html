@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Results — Smart Test Platform{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="results-wrap">
+  <div class="panel results-card">
+    <div class="score-ring">
+      <svg width="200" height="200" viewBox="0 0 200 200">
+        <defs>
+          <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#22d3ee"/>
+            <stop offset="100%" stop-color="#ec4899"/>
+          </linearGradient>
+        </defs>
+        <circle class="track" cx="100" cy="100" r="86"></circle>
+        <circle class="fill" id="score-circle" cx="100" cy="100" r="86"></circle>
+      </svg>
+      <div class="score-num" id="score-num">0%</div>
+    </div>
+    <h2>{{ session.subject.icon }} {{ session.subject.name }}</h2>
+    <p class="results-sub">You scored <strong>{{ session.score }}</strong> out of <strong>{{ session.total_questions }}</strong></p>
+    <div class="results-actions">
+      <a href="{% url 'quiz_review' session.id %}" class="btn btn-ghost">Review Answers</a>
+      <a href="{% url 'quiz_setup' %}" class="btn btn-primary">Take Another Test</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const pct = {{ session.percentage }};
+  const circle = document.getElementById('score-circle');
+  const numEl = document.getElementById('score-num');
+  const radius = 86;
+  const circumference = 2 * Math.PI * radius;
+  circle.style.strokeDasharray = circumference;
+  circle.style.strokeDashoffset = circumference;
+
+  requestAnimationFrame(() => {
+    circle.style.strokeDashoffset = circumference - (pct / 100) * circumference;
+  });
+
+  let shown = 0;
+  const duration = 1200;
+  const start = performance.now();
+  function tick(now) {
+    const t = Math.min(1, (now - start) / duration);
+    shown = Math.round(pct * t);
+    numEl.textContent = shown + '%';
+    if (t < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  if (pct >= 70 && window.confetti) {
+    setTimeout(() => {
+      confetti({ particleCount: 140, spread: 90, origin: { y: 0.6 }, colors: ['#7c3aed', '#22d3ee', '#ec4899'] });
+    }, 400);
+  }
+
+  if (window.gsap) {
+    gsap.from('.results-card', { y: 24, opacity: 0, duration: 0.6, ease: 'power3.out' });
+  }
+</script>
+{% endblock %}

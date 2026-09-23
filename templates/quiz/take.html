@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ session.subject.name }} Test — Smart Test Platform{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="quiz-wrap">
+  <div class="quiz-topbar">
+    <div class="quiz-progress-track"><div class="quiz-progress-fill" id="quiz-progress-fill"></div></div>
+    <div class="quiz-counter" id="quiz-counter"></div>
+  </div>
+  <div id="question-mount"></div>
+  <div class="quiz-nav">
+    <button class="btn btn-ghost" id="btn-prev">← Back</button>
+    <button class="btn btn-primary" id="btn-next">Next →</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ questions|json_script:"questions-data" }}
+<script>
+  window.QUIZ_CONFIG = {
+    submitUrl: "{% url 'quiz_submit' session.id %}",
+    resultsUrl: "{% url 'quiz_results' session.id %}",
+  };
+</script>
+<script src="{% static 'js/quiz-take.js' %}"></script>
+{% endblock %}

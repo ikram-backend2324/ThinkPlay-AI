@@ -1,0 +1,72 @@
+"""
+Turns a Question + its Answer into plain-text "your answer" / "correct
+answer" strings for the read-only review page.
+"""
+
+from core.question_types import (
+    CODE_COMPLETE, FILL_BLANK, MATCHING, MULTI_SELECT, NUMERIC, ORDERING,
+)
+
+
+def _fill_blank(data, submitted):
+    your = submitted.get("value", "") or "(no answer)"
+    correct = " / ".join(data.get("accepted_answers", []))
+    return your, correct
+
+
+def _matching(data, submitted):
+    pairs = {p["id"]: p for p in data.get("pairs", [])}
+    submitted_map = submitted.get("pairs", {})
+    your_lines = []
+    correct_lines = []
+    for pid, pair in pairs.items():
+        target_id = submitted_map.get(pid)
+        target_text = pairs.get(target_id, {}).get("right", "(unmatched)") if target_id else "(unmatched)"
+        your_lines.append(f"{pair['left']} → {target_text}")
+        correct_lines.append(f"{pair['left']} → {pair['right']}")
+    return "; ".join(your_lines), "; ".join(correct_lines)
+
+
+def _ordering(data, submitted):
+    items = {i["id"]: i["text"] for i in data.get("items", [])}
+    your = " → ".join(items.get(i, "?") for i in submitted.get("order", []))
+    correct = " → ".join(items.get(i, "?") for i in data.get("correct_order", []))
+    return your or "(no answer)", correct
+
+
+def _multi_select(data, submitted):
+    options = {o["id"]: o["text"] for o in data.get("options", [])}
+    your = ", ".join(options.get(i, "?") for i in submitted.get("selected_ids", []))
+    correct = ", ".join(options.get(i, "?") for i in data.get("correct_ids", []))
+    return your or "(no answer)", correct
+
+
+def _numeric(data, submitted):
+    unit = f" {data['unit']}" if data.get("unit") else ""
+    your = submitted.get("value")
+    your = f"{your}{unit}" if your is not None else "(no answer)"
+    correct = f"{data.get('answer')}{unit}"
+    return your, correct
+
+
+def _code_complete(data, submitted):
+    your = submitted.get("value", "") or "(no answer)"
+    correct = " / ".join(data.get("accepted_answers", []))
+    return your, correct
+
+
+DESCRIBERS = {
+    FILL_BLANK: _fill_blank,
+    MATCHING: _matching,
+    ORDERING: _ordering,
+    MULTI_SELECT: _multi_select,
+    NUMERIC: _numeric,
+    CODE_COMPLETE: _code_complete,
+}
+
+
+def describe_answer(question_type, question_data, submitted_data):
+    describer = DESCRIBERS.get(question_type)
+    if not describer:
+        return "(unsupported)", "(unsupported)"
+    return describer(question_data, submitted_data or {})
