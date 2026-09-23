@@ -4,3 +4,4 @@ gunicorn>=22.0
 psycopg2-binary
 dj-database-url
 requests
+python-dotenv

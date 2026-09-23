@@ -6,8 +6,13 @@ import os
 from pathlib import Path
 
 import dj_database_url
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Loads a local .env file if one exists (harmless no-op on Render, where the
+# real env vars are set directly in the dashboard instead of a file).
+load_dotenv(BASE_DIR / ".env")
 
 # In production (Render, etc.) set real values for these via environment
 # variables. Locally, the fallbacks below just work out of the box.
