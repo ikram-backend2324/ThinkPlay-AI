@@ -10,17 +10,35 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from core.forms import RegisterForm
 from core.grading import grade_answer
+from core.i18n import DEFAULT_LANGUAGE, LANGUAGE_CODES, get_strings, subject_name
 from core.models import Answer, Question, Subject, TestSession
-from core.question_types import ALL_TYPES, DESCRIPTIONS, ICONS, LABELS
+from core.question_types import ALL_TYPES, ICONS
 from core.review import describe_answer
 from core.services.openrouter import GenerationError, generate_question_batch
 
 MIN_QUESTIONS = 10
 MAX_QUESTIONS = 100
+
+
+def _current_language(request):
+    return request.session.get("language", DEFAULT_LANGUAGE)
+
+
+def set_language_view(request):
+    if request.method == "POST":
+        lang = request.POST.get("language")
+        next_url = request.POST.get("next") or "/"
+        if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+            next_url = "/"
+        if lang in LANGUAGE_CODES:
+            request.session["language"] = lang
+        return redirect(next_url)
+    return redirect("landing")
 
 
 def landing(request):
@@ -30,12 +48,13 @@ def landing(request):
 def register(request):
     if request.user.is_authenticated:
         return redirect("quiz_setup")
+    t = get_strings(_current_language(request))
     if request.method == "POST":
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
             auth_login(request, user)
-            messages.success(request, f"Welcome, {user.username}!")
+            messages.success(request, t["msg_welcome"].format(username=user.username))
             return redirect("quiz_setup")
     else:
         form = RegisterForm()
@@ -51,8 +70,9 @@ login_view = ThemedLoginView.as_view()
 
 
 def logout_view(request):
+    t = get_strings(_current_language(request))
     auth_logout(request)
-    messages.info(request, "You've been logged out.")
+    messages.info(request, t["msg_logged_out"])
     return redirect("landing")
 
 
@@ -67,9 +87,20 @@ def history(request):
 
 @login_required
 def quiz_setup(request):
-    subjects = Subject.objects.all()
+    lang = _current_language(request)
+    t = get_strings(lang)
+
+    subjects = [
+        {"id": s.id, "icon": s.icon, "name": subject_name(s, lang)}
+        for s in Subject.objects.all()
+    ]
     interaction_types = [
-        {"code": code, "label": LABELS[code], "description": DESCRIPTIONS[code], "icon": ICONS[code]}
+        {
+            "code": code,
+            "label": t[f"type_label_{code}"],
+            "description": t[f"type_desc_{code}"],
+            "icon": ICONS[code],
+        }
         for code in ALL_TYPES
     ]
 
@@ -83,15 +114,15 @@ def quiz_setup(request):
             count = int(count)
         except (TypeError, ValueError):
             count = 0
-        chosen_types = [t for t in chosen_types if t in ALL_TYPES]
+        chosen_types = [ctype for ctype in chosen_types if ctype in ALL_TYPES]
 
         error = None
         if not subject:
-            error = "Please choose a subject."
+            error = t["msg_choose_subject"]
         elif not (MIN_QUESTIONS <= count <= MAX_QUESTIONS):
-            error = f"Question count must be between {MIN_QUESTIONS} and {MAX_QUESTIONS}."
+            error = t["msg_count_range"].format(min=MIN_QUESTIONS, max=MAX_QUESTIONS)
         elif len(chosen_types) < 2:
-            error = "Pick at least 2 interactive question formats."
+            error = t["msg_min_types"]
 
         if error:
             messages.error(request, error)
@@ -101,6 +132,7 @@ def quiz_setup(request):
                 subject=subject,
                 requested_count=count,
                 interaction_types=chosen_types,
+                language=lang,
                 status=TestSession.STATUS_GENERATING,
             )
             return redirect("quiz_generating", session_id=session.id)
@@ -146,10 +178,11 @@ def generate_batch(request, session_id):
 
     try:
         questions = generate_question_batch(
-            subject_name=session.subject.name,
+            subject_name=subject_name(session.subject, session.language),
             interaction_types=session.valid_interaction_types(),
             count=batch_size,
             avoid_topics=avoid_topics,
+            language=session.language,
         )
     except GenerationError as exc:
         if existing_count == 0:
@@ -250,15 +283,16 @@ def quiz_review(request, session_id):
     session = get_object_or_404(TestSession, id=session_id, user=request.user)
     if session.status != TestSession.STATUS_COMPLETED:
         return redirect("quiz_take", session_id=session.id)
+    t = get_strings(_current_language(request))
     rows = []
     for question in session.questions.select_related("answer").all():
         your_answer, correct_answer = describe_answer(
-            question.type, question.data, question.answer.submitted_data
+            question.type, question.data, question.answer.submitted_data, t
         )
         rows.append(
             {
                 "question": question,
-                "type_label": LABELS.get(question.type, question.type),
+                "type_label": t.get(f"type_label_{question.type}", question.type),
                 "is_correct": question.answer.is_correct,
                 "your_answer": your_answer,
                 "correct_answer": correct_answer,

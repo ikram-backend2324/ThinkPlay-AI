@@ -7,6 +7,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     path('', views.landing, name='landing'),
+    path('set-language/', views.set_language_view, name='set_language'),
 
     path('accounts/register/', views.register, name='register'),
     path('accounts/login/', views.login_view, name='login'),

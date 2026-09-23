@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static i18n_extras %}
 {% block title %}Results — Smart Test Platform{% endblock %}
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
@@ -20,11 +20,11 @@
       </svg>
       <div class="score-num" id="score-num">0%</div>
     </div>
-    <h2>{{ session.subject.icon }} {{ session.subject.name }}</h2>
-    <p class="results-sub">You scored <strong>{{ session.score }}</strong> out of <strong>{{ session.total_questions }}</strong></p>
+    <h2>{{ session.subject.icon }} {{ session.subject|localized_subject:LANG }}</h2>
+    <p class="results-sub">{{ t.results_scored_prefix }} <strong>{{ session.score }}</strong> {{ t.results_scored_infix }} <strong>{{ session.total_questions }}</strong></p>
     <div class="results-actions">
-      <a href="{% url 'quiz_review' session.id %}" class="btn btn-ghost">Review Answers</a>
-      <a href="{% url 'quiz_setup' %}" class="btn btn-primary">Take Another Test</a>
+      <a href="{% url 'quiz_review' session.id %}" class="btn btn-ghost">{{ t.results_review_btn }}</a>
+      <a href="{% url 'quiz_setup' %}" class="btn btn-primary">{{ t.results_another_btn }}</a>
     </div>
   </div>
 </div>

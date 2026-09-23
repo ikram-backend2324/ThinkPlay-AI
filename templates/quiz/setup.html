@@ -2,13 +2,13 @@
 {% block title %}New Test — Smart Test Platform{% endblock %}
 {% block content %}
 <div class="setup-wrap">
-  <h1>Build your test</h1>
-  <p class="lead">Choose a subject, how many questions you want, and which interactive formats the AI should use.</p>
+  <h1>{{ t.setup_heading }}</h1>
+  <p class="lead">{{ t.setup_lead }}</p>
 
   <form method="post" id="setup-form">
     {% csrf_token %}
 
-    <div class="section-title">1. Subject</div>
+    <div class="section-title">{{ t.setup_section_subject }}</div>
     <div class="subject-grid">
       {% for subject in subjects %}
         <label class="subject-card" data-subject-card>
@@ -19,27 +19,27 @@
       {% endfor %}
     </div>
 
-    <div class="section-title">2. How many questions?</div>
+    <div class="section-title">{{ t.setup_section_count }}</div>
     <div class="count-row">
       <input type="range" id="count-range" min="{{ min_questions }}" max="{{ max_questions }}" value="20" step="1">
       <input type="number" name="count" id="count-number" min="{{ min_questions }}" max="{{ max_questions }}" value="20" style="width:90px">
       <span class="count-display" id="count-display">20</span>
     </div>
 
-    <div class="section-title">3. Interactive formats — pick at least 2 (no boring multiple choice here)</div>
+    <div class="section-title">{{ t.setup_section_types }}</div>
     <div class="type-grid">
-      {% for t in interaction_types %}
+      {% for it in interaction_types %}
         <label class="type-card" data-type-card>
-          <input type="checkbox" name="interaction_types" value="{{ t.code }}">
-          <span class="icon">{{ t.icon }}</span>
-          <div class="label">{{ t.label }}</div>
-          <div class="desc">{{ t.description }}</div>
+          <input type="checkbox" name="interaction_types" value="{{ it.code }}">
+          <span class="icon">{{ it.icon }}</span>
+          <div class="label">{{ it.label }}</div>
+          <div class="desc">{{ it.description }}</div>
         </label>
       {% endfor %}
     </div>
 
     <div class="setup-footer">
-      <button type="submit" class="btn btn-primary" id="setup-submit">Generate My Test →</button>
+      <button type="submit" class="btn btn-primary" id="setup-submit">{{ t.setup_submit }}</button>
     </div>
   </form>
 </div>
@@ -76,11 +76,11 @@
     const checked = document.querySelectorAll('input[name="interaction_types"]:checked').length;
     if (checked < 2) {
       e.preventDefault();
-      alert('Pick at least 2 interactive formats.');
+      alert("{{ t.setup_alert_min_types|escapejs }}");
       return;
     }
     document.getElementById('setup-submit').disabled = true;
-    document.getElementById('setup-submit').textContent = 'Starting…';
+    document.getElementById('setup-submit').textContent = "{{ t.setup_starting|escapejs }}";
   });
 
   if (window.gsap) {

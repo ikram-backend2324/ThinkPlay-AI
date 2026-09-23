@@ -24,14 +24,8 @@
     return match ? match.pop() : "";
   }
 
-  const TYPE_LABELS = {
-    fill_blank: "Fill in the Blank",
-    matching: "Drag & Drop Matching",
-    ordering: "Sequence Ordering",
-    multi_select: "Select All That Apply",
-    numeric: "Numeric Answer",
-    code_complete: "Code Completion",
-  };
+  const I18N = window.QUIZ_I18N || {};
+  const TYPE_LABELS = I18N.typeLabels || {};
 
   function renderFillBlank(container, q, prev) {
     const wrap = document.createElement("div");
@@ -204,14 +198,14 @@
 
     const leftCol = document.createElement("div");
     leftCol.className = "matching-col";
-    leftCol.innerHTML = "<h4>Terms</h4>";
+    leftCol.innerHTML = `<h4>${I18N.terms || "Terms"}</h4>`;
     const pool = document.createElement("ul");
     pool.className = "order-list match-pool";
     leftCol.appendChild(pool);
 
     const rightCol = document.createElement("div");
     rightCol.className = "matching-col";
-    rightCol.innerHTML = "<h4>Definitions</h4>";
+    rightCol.innerHTML = `<h4>${I18N.definitions || "Definitions"}</h4>`;
 
     const targetLists = {};
     const targetLabels = {};
@@ -307,7 +301,7 @@
     } else {
       const fallback = document.createElement("div");
       fallback.className = "question-prompt";
-      fallback.textContent = "This question type isn't supported yet.";
+      fallback.textContent = I18N.unsupported || "This question type isn't supported yet.";
       card.appendChild(fallback);
       getters[index] = () => ({});
     }
@@ -315,7 +309,7 @@
     counter.textContent = `${index + 1} / ${questions.length}`;
     progressFill.style.width = `${Math.round((index / questions.length) * 100)}%`;
     btnPrev.style.visibility = index === 0 ? "hidden" : "visible";
-    btnNext.textContent = index === questions.length - 1 ? "Finish →" : "Next →";
+    btnNext.textContent = index === questions.length - 1 ? (I18N.finish || "Finish →") : (I18N.next || "Next →");
 
     if (window.gsap) {
       gsap.fromTo(card, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" });
@@ -332,7 +326,7 @@
     collectCurrentAnswer();
     btnNext.disabled = true;
     btnPrev.disabled = true;
-    btnNext.textContent = "Grading…";
+    btnNext.textContent = I18N.grading || "Grading…";
     try {
       const res = await fetch(window.QUIZ_CONFIG.submitUrl, {
         method: "POST",
@@ -344,8 +338,8 @@
     } catch (err) {
       btnNext.disabled = false;
       btnPrev.disabled = false;
-      btnNext.textContent = "Finish →";
-      alert("Could not submit your test — check your connection and try again.");
+      btnNext.textContent = I18N.finish || "Finish →";
+      alert(I18N.submitError || "Could not submit your test — check your connection and try again.");
     }
   }
 

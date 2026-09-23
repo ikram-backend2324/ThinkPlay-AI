@@ -34,6 +34,7 @@ class TestSession(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="sessions")
     requested_count = models.PositiveSmallIntegerField()
     interaction_types = models.JSONField(default=list)
+    language = models.CharField(max_length=8, default="en")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_GENERATING)
     score = models.PositiveSmallIntegerField(default=0)
     total_questions = models.PositiveSmallIntegerField(default=0)

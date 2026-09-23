@@ -9,6 +9,7 @@ import json
 import requests
 from django.conf import settings
 
+from core.i18n import AI_LANGUAGE_NAMES, DEFAULT_LANGUAGE
 from core.question_types import REQUIRED_FIELDS, SCHEMA_HINTS
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -26,7 +27,7 @@ def _type_sequence(interaction_types, count):
     return [next(cycle) for _ in range(count)]
 
 
-def _build_prompt(subject_name, type_sequence, avoid_topics):
+def _build_prompt(subject_name, type_sequence, avoid_topics, language_name):
     lines = [
         f"You are writing an interactive quiz on the subject: {subject_name}.",
         f"Generate exactly {len(type_sequence)} questions, in this exact order of formats:",
@@ -41,6 +42,16 @@ def _build_prompt(subject_name, type_sequence, avoid_topics):
         "Each question object must match the exact shape given for its type above, "
         "including the \"type\" field. Vary the difficulty and keep every question "
         "factually correct and unambiguous."
+    )
+    lines.append(
+        f"\nWrite every human-readable text value (prompt, explanation, left/right terms, "
+        f"item text, option text, accepted_answers, unit) in {language_name}. "
+        "Keep all JSON field/key names and every \"type\" value exactly as specified "
+        "in English — only translate the natural-language VALUES, never the keys. "
+        "Exception: for code_complete questions, the \"language\" field must still name "
+        "a programming language (e.g. \"python\"), and code_template/accepted_answers "
+        "code snippets stay in that programming language — only the surrounding "
+        f"prompt/explanation text should be written in {language_name}."
     )
     if avoid_topics:
         joined = "; ".join(avoid_topics[-20:])
@@ -62,7 +73,7 @@ def _validate_question(raw, expected_type):
     return raw
 
 
-def generate_question_batch(subject_name, interaction_types, count, avoid_topics=None):
+def generate_question_batch(subject_name, interaction_types, count, avoid_topics=None, language=DEFAULT_LANGUAGE):
     """
     Returns a list of validated question dicts (length <= count — malformed
     entries are dropped rather than failing the whole batch). Raises
@@ -73,7 +84,8 @@ def generate_question_batch(subject_name, interaction_types, count, avoid_topics
         raise GenerationError("OPENROUTER_API_KEY is not configured.")
 
     type_sequence = _type_sequence(interaction_types, count)
-    prompt = _build_prompt(subject_name, type_sequence, avoid_topics or [])
+    language_name = AI_LANGUAGE_NAMES.get(language, AI_LANGUAGE_NAMES[DEFAULT_LANGUAGE])
+    prompt = _build_prompt(subject_name, type_sequence, avoid_topics or [], language_name)
 
     headers = {
         "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",

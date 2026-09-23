@@ -3,23 +3,23 @@
 {% block content %}
 <div class="center-stage">
   <div class="panel form-panel">
-    <h2>Welcome back</h2>
+    <h2>{{ t.login_heading }}</h2>
     {% if form.non_field_errors %}
       <ul class="form-errors">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
     {% endif %}
     <form method="post">
       {% csrf_token %}
       <div class="field">
-        <label for="{{ form.username.id_for_label }}">Username</label>
+        <label for="{{ form.username.id_for_label }}">{{ t.label_username }}</label>
         {{ form.username }}
       </div>
       <div class="field">
-        <label for="{{ form.password.id_for_label }}">Password</label>
+        <label for="{{ form.password.id_for_label }}">{{ t.label_password }}</label>
         {{ form.password }}
       </div>
-      <button type="submit" class="btn btn-primary btn-block">Log In</button>
+      <button type="submit" class="btn btn-primary btn-block">{{ t.btn_login }}</button>
     </form>
-    <p class="help-text">New here? <a href="{% url 'register' %}">Create an account</a></p>
+    <p class="help-text">{{ t.new_here }} <a href="{% url 'register' %}">{{ t.register_link }}</a></p>
   </div>
 </div>
 {% endblock %}

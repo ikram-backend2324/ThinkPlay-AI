@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% load static %}
-{% block title %}{{ session.subject.name }} Test — Smart Test Platform{% endblock %}
+{% load static i18n_extras %}
+{% block title %}{{ session.subject|localized_subject:LANG }} Test — Smart Test Platform{% endblock %}
 
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
@@ -14,8 +14,8 @@
   </div>
   <div id="question-mount"></div>
   <div class="quiz-nav">
-    <button class="btn btn-ghost" id="btn-prev">← Back</button>
-    <button class="btn btn-primary" id="btn-next">Next →</button>
+    <button class="btn btn-ghost" id="btn-prev">{{ t.quiz_back }}</button>
+    <button class="btn btn-primary" id="btn-next">{{ t.quiz_next }}</button>
   </div>
 </div>
 {% endblock %}
@@ -26,6 +26,24 @@
   window.QUIZ_CONFIG = {
     submitUrl: "{% url 'quiz_submit' session.id %}",
     resultsUrl: "{% url 'quiz_results' session.id %}",
+  };
+  window.QUIZ_I18N = {
+    back: "{{ t.quiz_back|escapejs }}",
+    next: "{{ t.quiz_next|escapejs }}",
+    finish: "{{ t.quiz_finish|escapejs }}",
+    grading: "{{ t.quiz_grading|escapejs }}",
+    unsupported: "{{ t.quiz_unsupported_type|escapejs }}",
+    submitError: "{{ t.quiz_submit_error|escapejs }}",
+    terms: "{{ t.quiz_terms|escapejs }}",
+    definitions: "{{ t.quiz_definitions|escapejs }}",
+    typeLabels: {
+      fill_blank: "{{ t.type_label_fill_blank|escapejs }}",
+      matching: "{{ t.type_label_matching|escapejs }}",
+      ordering: "{{ t.type_label_ordering|escapejs }}",
+      multi_select: "{{ t.type_label_multi_select|escapejs }}",
+      numeric: "{{ t.type_label_numeric|escapejs }}",
+      code_complete: "{{ t.type_label_code_complete|escapejs }}",
+    },
   };
 </script>
 <script src="{% static 'js/quiz-take.js' %}"></script>

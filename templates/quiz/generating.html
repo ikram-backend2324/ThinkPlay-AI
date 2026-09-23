@@ -3,17 +3,23 @@
 {% block content %}
 <div class="generating-wrap">
   <div class="spinner-3d"></div>
-  <h2 id="gen-headline">Conjuring your questions…</h2>
+  <h2 id="gen-headline">{{ t.generating_headline }}</h2>
   <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
-  <div class="progress-label" id="progress-label">Starting up…</div>
+  <div class="progress-label" id="progress-label">{{ t.generating_starting }}</div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-  const sessionId = {{ session.id }};
   const batchUrl = "{% url 'generate_batch' session.id %}";
   const takeUrl = "{% url 'quiz_take' session.id %}";
+  const GEN_I18N = {
+    progress: "{{ t.generating_progress|escapejs }}",
+    done: "{{ t.generating_done|escapejs }}",
+    failedHeadline: "{{ t.generating_failed_headline|escapejs }}",
+    failedBody: "{{ t.generating_failed_body|escapejs }}",
+    retry: "{{ t.generating_retry|escapejs }}",
+  };
 
   function getCookie(name) {
     const match = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
@@ -33,23 +39,25 @@
       const data = await res.json();
 
       if (data.failed) {
-        label.textContent = "Couldn't reach the AI. Please try again in a moment.";
-        document.getElementById('gen-headline').textContent = 'Generation failed';
+        label.textContent = GEN_I18N.failedBody;
+        document.getElementById('gen-headline').textContent = GEN_I18N.failedHeadline;
         return;
       }
 
       const pct = data.target ? Math.round((data.generated / data.target) * 100) : 0;
       fill.style.width = pct + '%';
-      label.textContent = `${data.generated} / ${data.target} questions ready`;
+      label.textContent = GEN_I18N.progress
+        .replace('{generated}', data.generated)
+        .replace('{target}', data.target);
 
       if (data.done) {
-        label.textContent = 'Done! Loading your test…';
+        label.textContent = GEN_I18N.done;
         setTimeout(() => { window.location.href = takeUrl; }, 500);
       } else {
         pump();
       }
     } catch (err) {
-      label.textContent = 'Connection hiccup, retrying…';
+      label.textContent = GEN_I18N.retry;
       setTimeout(pump, 1500);
     }
   }

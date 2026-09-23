@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ LANG }}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -20,14 +20,30 @@
       <a class="brand" href="{% url 'landing' %}">✦ Smart Test</a>
       <div class="nav-links">
         {% if user.is_authenticated %}
-          <a href="{% url 'quiz_setup' %}">New Test</a>
-          <a href="{% url 'history' %}">History</a>
+          <a href="{% url 'quiz_setup' %}">{{ t.nav_new_test }}</a>
+          <a href="{% url 'history' %}">{{ t.nav_history }}</a>
           <span>{{ user.username }}</span>
-          <a href="{% url 'logout' %}" class="btn btn-ghost">Logout</a>
+          <a href="{% url 'logout' %}" class="btn btn-ghost">{{ t.nav_logout }}</a>
         {% else %}
-          <a href="{% url 'login' %}">Login</a>
-          <a href="{% url 'register' %}" class="btn btn-primary">Get Started</a>
+          <a href="{% url 'login' %}">{{ t.nav_login }}</a>
+          <a href="{% url 'register' %}" class="btn btn-primary">{{ t.nav_get_started }}</a>
         {% endif %}
+
+        <div class="lang-switcher" id="lang-switcher">
+          <button type="button" class="btn btn-ghost lang-btn" id="lang-btn">
+            {% for code, label in LANGUAGES %}{% if code == LANG %}{{ label }}{% endif %}{% endfor %} ▾
+          </button>
+          <div class="lang-menu" id="lang-menu">
+            {% for code, label in LANGUAGES %}
+              <form method="post" action="{% url 'set_language' %}">
+                {% csrf_token %}
+                <input type="hidden" name="language" value="{{ code }}">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="lang-option {% if code == LANG %}active{% endif %}">{{ label }}</button>
+              </form>
+            {% endfor %}
+          </div>
+        </div>
       </div>
     </nav>
 
@@ -43,6 +59,19 @@
   </div>
 
   <script src="{% static 'js/three-bg.js' %}"></script>
+  <script>
+    (function () {
+      const btn = document.getElementById('lang-btn');
+      const menu = document.getElementById('lang-menu');
+      const wrap = document.getElementById('lang-switcher');
+      if (!btn || !menu) return;
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        wrap.classList.toggle('open');
+      });
+      document.addEventListener('click', () => wrap.classList.remove('open'));
+    })();
+  </script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>

@@ -8,49 +8,49 @@ from core.question_types import (
 )
 
 
-def _fill_blank(data, submitted):
-    your = submitted.get("value", "") or "(no answer)"
+def _fill_blank(data, submitted, t):
+    your = submitted.get("value", "") or t["quiz_no_answer"]
     correct = " / ".join(data.get("accepted_answers", []))
     return your, correct
 
 
-def _matching(data, submitted):
+def _matching(data, submitted, t):
     pairs = {p["id"]: p for p in data.get("pairs", [])}
     submitted_map = submitted.get("pairs", {})
     your_lines = []
     correct_lines = []
     for pid, pair in pairs.items():
         target_id = submitted_map.get(pid)
-        target_text = pairs.get(target_id, {}).get("right", "(unmatched)") if target_id else "(unmatched)"
+        target_text = pairs.get(target_id, {}).get("right", t["quiz_unmatched"]) if target_id else t["quiz_unmatched"]
         your_lines.append(f"{pair['left']} → {target_text}")
         correct_lines.append(f"{pair['left']} → {pair['right']}")
     return "; ".join(your_lines), "; ".join(correct_lines)
 
 
-def _ordering(data, submitted):
+def _ordering(data, submitted, t):
     items = {i["id"]: i["text"] for i in data.get("items", [])}
     your = " → ".join(items.get(i, "?") for i in submitted.get("order", []))
     correct = " → ".join(items.get(i, "?") for i in data.get("correct_order", []))
-    return your or "(no answer)", correct
+    return your or t["quiz_no_answer"], correct
 
 
-def _multi_select(data, submitted):
+def _multi_select(data, submitted, t):
     options = {o["id"]: o["text"] for o in data.get("options", [])}
     your = ", ".join(options.get(i, "?") for i in submitted.get("selected_ids", []))
     correct = ", ".join(options.get(i, "?") for i in data.get("correct_ids", []))
-    return your or "(no answer)", correct
+    return your or t["quiz_no_answer"], correct
 
 
-def _numeric(data, submitted):
+def _numeric(data, submitted, t):
     unit = f" {data['unit']}" if data.get("unit") else ""
     your = submitted.get("value")
-    your = f"{your}{unit}" if your is not None else "(no answer)"
+    your = f"{your}{unit}" if your is not None else t["quiz_no_answer"]
     correct = f"{data.get('answer')}{unit}"
     return your, correct
 
 
-def _code_complete(data, submitted):
-    your = submitted.get("value", "") or "(no answer)"
+def _code_complete(data, submitted, t):
+    your = submitted.get("value", "") or t["quiz_no_answer"]
     correct = " / ".join(data.get("accepted_answers", []))
     return your, correct
 
@@ -65,8 +65,8 @@ DESCRIBERS = {
 }
 
 
-def describe_answer(question_type, question_data, submitted_data):
+def describe_answer(question_type, question_data, submitted_data, t):
     describer = DESCRIBERS.get(question_type)
     if not describer:
         return "(unsupported)", "(unsupported)"
-    return describer(question_data, submitted_data or {})
+    return describer(question_data, submitted_data or {}, t)
