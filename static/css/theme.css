@@ -58,6 +58,8 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  row-gap: 10px;
   padding: 18px 32px;
   background: linear-gradient(to bottom, rgba(5, 6, 15, 0.85), transparent);
 }
@@ -75,7 +77,9 @@ a { color: inherit; text-decoration: none; }
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 18px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px 18px;
   font-size: 0.92rem;
   color: var(--text-dim);
 }
@@ -540,7 +544,47 @@ input:focus { outline: 2px solid var(--accent-2); outline-offset: 1px; }
 .empty-state { text-align: center; color: var(--text-dim); padding: 60px 20px; }
 
 @media (max-width: 640px) {
-  .navbar { padding: 14px 18px; }
+  .navbar { padding: 12px 16px; }
+  .nav-links { font-size: 0.85rem; gap: 8px 14px; }
   .question-card, .form-panel, .results-card { padding: 22px; }
   .matching-cols { flex-direction: column; }
+  .matching-col { min-width: 0; }
+
+  .hero { padding: 44px 18px 64px; gap: 18px; }
+  .hero-badges { gap: 8px; }
+  .badge { font-size: 0.75rem; padding: 6px 12px; }
+
+  .setup-wrap, .history-wrap { padding: 32px 16px 80px; }
+  .setup-wrap h1 { font-size: 1.7rem; }
+  .setup-wrap .lead { margin-bottom: 26px; }
+  .section-title { margin: 26px 0 12px; }
+  .subject-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+  .type-grid, .chip-grid { gap: 10px; }
+  .count-row { gap: 12px; }
+  .count-row input[type="range"] { min-width: 140px; }
+  .setup-footer { justify-content: stretch; }
+  .setup-footer .btn { width: 100%; }
+
+  .quiz-wrap { padding: 18px 14px 48px; }
+  .question-card { min-height: 0; }
+  .question-prompt { font-size: 1.1rem; }
+  .quiz-nav { gap: 10px; }
+  .quiz-nav .btn { flex: 1; }
+  .numeric-row { gap: 12px; }
+  .numeric-row input[type="range"] { min-width: 140px; }
+
+  .results-wrap { padding: 28px 16px; }
+  .results-card { padding: 28px 20px; }
+  .score-ring, .score-ring svg { width: 160px; height: 160px; }
+  .score-ring .score-num { font-size: 2.1rem; }
+
+  .history-row { padding: 14px 16px; gap: 12px; }
+  .review-item { padding: 18px 20px; }
+}
+
+@media (max-width: 400px) {
+  .lang-btn { padding: 8px 12px; font-size: 0.8rem; }
+  .subject-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+  .numeric-exact { width: 110px; }
+  .code-blank { min-width: 90px; }
 }
