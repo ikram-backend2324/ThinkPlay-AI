@@ -6,7 +6,12 @@
   <h2 id="gen-headline">{{ t.generating_headline }}</h2>
   <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
   <div class="progress-label" id="progress-label">{{ t.generating_starting }}</div>
+  <button type="button" class="btn btn-ghost quiz-give-up" id="btn-give-up">{{ t.quiz_give_up }}</button>
 </div>
+
+<form method="post" action="{% url 'quiz_abandon' session.id %}" id="give-up-form" style="display:none;">
+  {% csrf_token %}
+</form>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -19,7 +24,18 @@
     failedHeadline: "{{ t.generating_failed_headline|escapejs }}",
     failedBody: "{{ t.generating_failed_body|escapejs }}",
     retry: "{{ t.generating_retry|escapejs }}",
+    giveUpConfirm: "{{ t.quiz_give_up_confirm|escapejs }}",
   };
+
+  const btnGiveUp = document.getElementById('btn-give-up');
+  const giveUpForm = document.getElementById('give-up-form');
+  let cancelled = false;
+  btnGiveUp.addEventListener('click', () => {
+    if (window.confirm(GEN_I18N.giveUpConfirm)) {
+      cancelled = true;
+      giveUpForm.submit();
+    }
+  });
 
   function getCookie(name) {
     const match = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
@@ -30,6 +46,7 @@
   const label = document.getElementById('progress-label');
 
   async function pump() {
+    if (cancelled) return;
     try {
       const res = await fetch(batchUrl, {
         method: 'POST',

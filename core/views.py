@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 
 from django.conf import settings
 from django.contrib import messages
@@ -78,11 +79,33 @@ def logout_view(request):
 
 @login_required
 def history(request):
-    sessions = (
+    lang = _current_language(request)
+    sessions = list(
         TestSession.objects.filter(user=request.user, status=TestSession.STATUS_COMPLETED)
         .select_related("subject")
     )
-    return render(request, "accounts/history.html", {"sessions": sessions})
+
+    grouped = defaultdict(lambda: {"icon": "", "name": "", "pct_sum": 0, "attempts": 0})
+    for s in sessions:
+        g = grouped[s.subject_id]
+        g["icon"] = s.subject.icon
+        g["name"] = subject_name(s.subject, lang)
+        g["pct_sum"] += s.percentage
+        g["attempts"] += 1
+    subject_stats = sorted(
+        (
+            {
+                "icon": g["icon"],
+                "name": g["name"],
+                "attempts": g["attempts"],
+                "avg_pct": round(g["pct_sum"] / g["attempts"]),
+            }
+            for g in grouped.values()
+        ),
+        key=lambda row: -row["avg_pct"],
+    )
+
+    return render(request, "accounts/history.html", {"sessions": sessions, "subject_stats": subject_stats})
 
 
 @login_required
@@ -224,6 +247,8 @@ def quiz_take(request, session_id):
         return redirect("quiz_generating", session_id=session.id)
     if session.status == TestSession.STATUS_COMPLETED:
         return redirect("quiz_results", session_id=session.id)
+    if session.status == TestSession.STATUS_ABANDONED:
+        return redirect("quiz_setup")
 
     questions = list(session.questions.all().values("id", "order", "type", "data"))
     return render(
@@ -239,6 +264,8 @@ def quiz_submit(request, session_id):
     session = get_object_or_404(TestSession, id=session_id, user=request.user)
     if session.status == TestSession.STATUS_COMPLETED:
         return JsonResponse({"redirect": reverse_lazy("quiz_results", args=[session.id])})
+    if session.status == TestSession.STATUS_ABANDONED:
+        return JsonResponse({"redirect": reverse_lazy("quiz_setup")})
 
     try:
         payload = json.loads(request.body)
@@ -268,6 +295,18 @@ def quiz_submit(request, session_id):
         session.save(update_fields=["score", "total_questions", "status", "completed_at"])
 
     return JsonResponse({"redirect": reverse_lazy("quiz_results", args=[session.id])})
+
+
+@login_required
+@require_POST
+def quiz_abandon(request, session_id):
+    session = get_object_or_404(TestSession, id=session_id, user=request.user)
+    if session.status not in (TestSession.STATUS_COMPLETED, TestSession.STATUS_ABANDONED):
+        session.status = TestSession.STATUS_ABANDONED
+        session.save(update_fields=["status"])
+        t = get_strings(_current_language(request))
+        messages.info(request, t["msg_test_abandoned"])
+    return redirect("quiz_setup")
 
 
 @login_required

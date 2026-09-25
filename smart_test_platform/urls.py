@@ -19,6 +19,7 @@ urlpatterns = [
     path('quiz/<int:session_id>/generate-batch/', views.generate_batch, name='generate_batch'),
     path('quiz/<int:session_id>/take/', views.quiz_take, name='quiz_take'),
     path('quiz/<int:session_id>/submit/', views.quiz_submit, name='quiz_submit'),
+    path('quiz/<int:session_id>/abandon/', views.quiz_abandon, name='quiz_abandon'),
     path('quiz/<int:session_id>/results/', views.quiz_results, name='quiz_results'),
     path('quiz/<int:session_id>/review/', views.quiz_review, name='quiz_review'),
 ]

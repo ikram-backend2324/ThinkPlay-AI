@@ -23,11 +23,13 @@ class TestSession(models.Model):
     STATUS_READY = "ready"
     STATUS_COMPLETED = "completed"
     STATUS_FAILED = "failed"
+    STATUS_ABANDONED = "abandoned"
     STATUS_CHOICES = [
         (STATUS_GENERATING, "Generating"),
         (STATUS_READY, "Ready"),
         (STATUS_COMPLETED, "Completed"),
         (STATUS_FAILED, "Failed"),
+        (STATUS_ABANDONED, "Abandoned"),
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="sessions")

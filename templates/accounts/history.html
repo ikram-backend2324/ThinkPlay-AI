@@ -5,6 +5,19 @@
 <div class="history-wrap">
   <h1>{{ t.history_heading }}</h1>
   {% if sessions %}
+    <div class="section-title">{{ t.history_by_subject }}</div>
+    <div class="subject-stats-grid">
+      {% for row in subject_stats %}
+        <div class="panel subject-stat-card">
+          <span class="icon">{{ row.icon }}</span>
+          <div class="subject-stat-name">{{ row.name }}</div>
+          <div class="subject-stat-pct">{{ row.avg_pct }}%</div>
+          <div class="subject-stat-attempts">{{ row.attempts }} {{ t.history_attempts_suffix }}</div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="section-title">{{ t.history_recent }}</div>
     {% for s in sessions %}
       <a class="panel history-row" href="{% url 'quiz_review' s.id %}">
         <span class="icon">{{ s.subject.icon }}</span>

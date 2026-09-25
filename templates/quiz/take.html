@@ -11,6 +11,7 @@
   <div class="quiz-topbar">
     <div class="quiz-progress-track"><div class="quiz-progress-fill" id="quiz-progress-fill"></div></div>
     <div class="quiz-counter" id="quiz-counter"></div>
+    <button type="button" class="btn btn-ghost quiz-give-up" id="btn-give-up">{{ t.quiz_give_up }}</button>
   </div>
   <div id="question-mount"></div>
   <div class="quiz-nav">
@@ -18,6 +19,10 @@
     <button class="btn btn-primary" id="btn-next">{{ t.quiz_next }}</button>
   </div>
 </div>
+
+<form method="post" action="{% url 'quiz_abandon' session.id %}" id="give-up-form" style="display:none;">
+  {% csrf_token %}
+</form>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -31,11 +36,13 @@
     back: "{{ t.quiz_back|escapejs }}",
     next: "{{ t.quiz_next|escapejs }}",
     finish: "{{ t.quiz_finish|escapejs }}",
+    giveUpConfirm: "{{ t.quiz_give_up_confirm|escapejs }}",
     grading: "{{ t.quiz_grading|escapejs }}",
     unsupported: "{{ t.quiz_unsupported_type|escapejs }}",
     submitError: "{{ t.quiz_submit_error|escapejs }}",
     terms: "{{ t.quiz_terms|escapejs }}",
     definitions: "{{ t.quiz_definitions|escapejs }}",
+    dropHere: "{{ t.quiz_drop_here|escapejs }}",
     typeLabels: {
       fill_blank: "{{ t.type_label_fill_blank|escapejs }}",
       matching: "{{ t.type_label_matching|escapejs }}",

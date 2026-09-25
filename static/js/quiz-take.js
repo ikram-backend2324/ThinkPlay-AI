@@ -9,6 +9,8 @@
   const progressFill = document.getElementById("quiz-progress-fill");
   const btnPrev = document.getElementById("btn-prev");
   const btnNext = document.getElementById("btn-next");
+  const btnGiveUp = document.getElementById("btn-give-up");
+  const giveUpForm = document.getElementById("give-up-form");
 
   function shuffle(arr) {
     const a = arr.slice();
@@ -208,21 +210,22 @@
     rightCol.innerHTML = `<h4>${I18N.definitions || "Definitions"}</h4>`;
 
     const targetLists = {};
-    const targetLabels = {};
+    const targetSlots = {};
     shuffle(pairs).forEach((pair) => {
-      const wrap = document.createElement("div");
-      wrap.className = "match-target-wrap";
+      const slot = document.createElement("div");
+      slot.className = "match-slot";
       const labelEl = document.createElement("div");
-      labelEl.className = "match-target";
+      labelEl.className = "match-slot-label";
       labelEl.textContent = pair.right;
       const targetList = document.createElement("ul");
-      targetList.className = "order-list match-drop";
+      targetList.className = "match-drop";
       targetList.dataset.pairId = pair.id;
-      wrap.appendChild(labelEl);
-      wrap.appendChild(targetList);
-      rightCol.appendChild(wrap);
+      targetList.dataset.placeholder = I18N.dropHere || "Drop here";
+      slot.appendChild(labelEl);
+      slot.appendChild(targetList);
+      rightCol.appendChild(slot);
       targetLists[pair.id] = targetList;
-      targetLabels[pair.id] = labelEl;
+      targetSlots[pair.id] = slot;
     });
 
     shuffle(pairs).forEach((pair) => {
@@ -233,7 +236,7 @@
       const assignedTo = prevPairs[pair.id];
       if (assignedTo && targetLists[assignedTo]) {
         targetLists[assignedTo].appendChild(li);
-        targetLabels[assignedTo].classList.add("filled");
+        targetSlots[assignedTo].classList.add("filled");
       } else {
         pool.appendChild(li);
       }
@@ -247,7 +250,7 @@
       const groupName = "match-" + q.id;
       new Sortable(pool, { group: groupName, animation: 150 });
       Object.entries(targetLists).forEach(([pairId, targetList]) => {
-        const labelEl = targetLabels[pairId];
+        const slotEl = targetSlots[pairId];
         new Sortable(targetList, {
           group: groupName,
           animation: 150,
@@ -255,10 +258,10 @@
             while (targetList.children.length > 1) {
               pool.appendChild(targetList.children[0]);
             }
-            labelEl.classList.add("filled");
+            slotEl.classList.add("filled");
           },
           onRemove() {
-            labelEl.classList.remove("filled");
+            slotEl.classList.remove("filled");
           },
         });
       });
@@ -360,6 +363,14 @@
       renderQuestion(current);
     }
   });
+
+  if (btnGiveUp && giveUpForm) {
+    btnGiveUp.addEventListener("click", () => {
+      if (window.confirm(I18N.giveUpConfirm || "Abandon this test?")) {
+        giveUpForm.submit();
+      }
+    });
+  }
 
   renderQuestion(0);
 })();

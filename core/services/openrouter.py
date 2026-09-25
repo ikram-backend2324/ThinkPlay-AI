@@ -45,7 +45,11 @@ def _build_prompt(subject_name, type_sequence, avoid_topics, language_name):
     )
     lines.append(
         f"\nWrite every human-readable text value (prompt, explanation, left/right terms, "
-        f"item text, option text, accepted_answers, unit) in {language_name}. "
+        f"item text, option text, accepted_answers, unit) in {language_name} — the actual "
+        f"{language_name} language specifically, with its own genuine vocabulary and "
+        "grammar, not a different but related language and not a machine-transliterated "
+        f"approximation. If you are not confident in {language_name}, still write your best "
+        f"genuine {language_name}, but never silently substitute a different language. "
         "Keep all JSON field/key names and every \"type\" value exactly as specified "
         "in English — only translate the natural-language VALUES, never the keys. "
         "Exception: for code_complete questions, the \"language\" field must still name "
@@ -92,8 +96,9 @@ def generate_question_batch(subject_name, interaction_types, count, avoid_topics
         "Content-Type": "application/json",
         "X-Title": "Smart Test Platform",
     }
+    model = settings.OPENROUTER_MODEL_OVERRIDES.get(language) or settings.OPENROUTER_MODEL
     payload = {
-        "model": settings.OPENROUTER_MODEL,
+        "model": model,
         "messages": [
             {
                 "role": "system",

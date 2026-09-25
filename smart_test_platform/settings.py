@@ -127,6 +127,18 @@ OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 # id (e.g. a ":free" one) via the env var without touching code.
 OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "openai/gpt-4o-mini")
 
+# Optional per-language override, e.g. OPENROUTER_MODEL_KAA=openai/gpt-4o —
+# lets you point a low-resource language (Karakalpak has very little
+# training data for most models) at a stronger/more expensive model without
+# raising the cost of every other language. Falls back to OPENROUTER_MODEL
+# when unset for a given language.
+OPENROUTER_MODEL_OVERRIDES = {
+    "en": os.environ.get("OPENROUTER_MODEL_EN", ""),
+    "ru": os.environ.get("OPENROUTER_MODEL_RU", ""),
+    "uz": os.environ.get("OPENROUTER_MODEL_UZ", ""),
+    "kaa": os.environ.get("OPENROUTER_MODEL_KAA", ""),
+}
+
 # How many questions to request from OpenRouter per generation batch. Kept
 # small so each HTTP request/response stays well under typical PaaS request
 # timeouts even while the whole test (20-100+ questions) builds up.
