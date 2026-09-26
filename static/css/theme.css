@@ -678,12 +678,14 @@ input:focus { outline: 2px solid var(--accent-2); outline-offset: 1px; }
 .history-row {
   display: flex;
   align-items: center;
-  gap: 18px;
+  flex-wrap: wrap;
+  gap: 10px 18px;
   padding: 18px 22px;
   margin-bottom: 12px;
 }
 .history-row .icon { font-size: 1.6rem; }
-.history-row .meta { flex: 1; }
+.history-row .meta { flex: 1; min-width: 140px; }
+.history-row form { margin: 0; }
 .history-row .meta .subj { font-weight: 700; }
 .history-row .meta .date { color: var(--text-dim); font-size: 0.82rem; }
 .history-score { font-weight: 800; font-size: 1.2rem; }

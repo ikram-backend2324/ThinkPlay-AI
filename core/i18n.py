@@ -203,6 +203,14 @@ TRANSLATIONS = {
         "assigned_empty": "No tests assigned to you right now.",
         "assigned_from_label": "From",
         "assigned_start_btn": "Start →",
+
+        "msg_choose_parse_mode": "Please choose a parsing mode.",
+        "msg_upload_fill_required": "Please fill in subject, title, and choose a file.",
+        "msg_upload_ai_min_types": "Pick at least 2 interactive formats for AI parsing.",
+        "msg_student_created": "Student account '{username}' created.",
+        "msg_student_removed": "Removed {username} — their history is kept but they can no longer log in.",
+        "msg_upload_success": "Uploaded {count} question(s).",
+        "msg_assign_success": "Assigned to {count} student(s).",
     },
     "ru": {
         "nav_new_test": "Новый тест",
@@ -376,6 +384,14 @@ TRANSLATIONS = {
         "assigned_empty": "Сейчас вам ничего не назначено.",
         "assigned_from_label": "От",
         "assigned_start_btn": "Начать →",
+
+        "msg_choose_parse_mode": "Пожалуйста, выберите режим разбора.",
+        "msg_upload_fill_required": "Пожалуйста, укажите предмет, название и выберите файл.",
+        "msg_upload_ai_min_types": "Выберите минимум 2 интерактивных формата для ИИ-разбора.",
+        "msg_student_created": "Аккаунт ученика «{username}» создан.",
+        "msg_student_removed": "Ученик {username} удалён — история сохранена, но вход больше невозможен.",
+        "msg_upload_success": "Загружено вопросов: {count}.",
+        "msg_assign_success": "Назначено ученикам: {count}.",
     },
     "uz": {
         "nav_new_test": "Yangi test",
@@ -549,6 +565,14 @@ TRANSLATIONS = {
         "assigned_empty": "Hozircha sizga tayinlangan test yo'q.",
         "assigned_from_label": "Kimdan",
         "assigned_start_btn": "Boshlash →",
+
+        "msg_choose_parse_mode": "Iltimos, tahlil rejimini tanlang.",
+        "msg_upload_fill_required": "Iltimos, fan, nomi va faylni to'ldiring.",
+        "msg_upload_ai_min_types": "AI tahlili uchun kamida 2 ta interaktiv formatni tanlang.",
+        "msg_student_created": "'{username}' o'quvchi hisobi yaratildi.",
+        "msg_student_removed": "{username} olib tashlandi — tarixi saqlanadi, lekin endi tizimga kira olmaydi.",
+        "msg_upload_success": "{count} ta savol yuklandi.",
+        "msg_assign_success": "{count} ta o'quvchiga tayinlandi.",
     },
     "kaa": {
         "nav_new_test": "Jańa test",
@@ -722,6 +746,14 @@ TRANSLATIONS = {
         "assigned_empty": "Házirshe sizge tayinlanǵan test joq.",
         "assigned_from_label": "Kimnen",
         "assigned_start_btn": "Baslaw →",
+
+        "msg_choose_parse_mode": "Iltimas, tallaw rejimin tańlań.",
+        "msg_upload_fill_required": "Iltimas, pán, atın hám fayldı toltırıń.",
+        "msg_upload_ai_min_types": "AI tallawı ushın keminde 2 interaktiv formattı tańlań.",
+        "msg_student_created": "'{username}' oqıwshı akkauntı jaratıldı.",
+        "msg_student_removed": "{username} alıp taslandı — tariyxı saqlanadı, biraq endi kiralmaydı.",
+        "msg_upload_success": "{count} soraw júklendi.",
+        "msg_assign_success": "{count} oqıwshıǵa tayinlandı.",
     },
 }
 

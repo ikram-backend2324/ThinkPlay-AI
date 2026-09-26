@@ -270,10 +270,14 @@
         new Sortable(targetList, {
           group: groupName,
           animation: 150,
-          onAdd() {
-            while (targetList.children.length > 1) {
-              pool.appendChild(targetList.children[0]);
-            }
+          onAdd(evt) {
+            // Evict whichever item ISN'T the one just dropped — SortableJS
+            // can insert the new item either before or after an existing
+            // occupant depending on drop position, so children[0] isn't
+            // reliably the old resident.
+            Array.from(targetList.children).forEach((child) => {
+              if (child !== evt.item) pool.appendChild(child);
+            });
             slotEl.classList.add("filled");
           },
           onRemove() {

@@ -46,7 +46,7 @@ def add_student(request):
         if form.is_valid():
             user = form.save()
             Profile.objects.create(user=user, role=Profile.ROLE_STUDENT, created_by=request.user)
-            messages.success(request, f"Student account '{user.username}' created.")
+            messages.success(request, get_strings(_current_language(request))["msg_student_created"].format(username=user.username))
             return redirect("teacher_dashboard")
     else:
         form = CreateAccountForm()
@@ -59,7 +59,10 @@ def remove_student(request, user_id):
     if request.method == "POST":
         profile.user.is_active = False
         profile.user.save(update_fields=["is_active"])
-        messages.info(request, f"Removed {profile.user.username} — their history is kept but they can no longer log in.")
+        messages.info(
+            request,
+            get_strings(_current_language(request))["msg_student_removed"].format(username=profile.user.username),
+        )
     return redirect("teacher_dashboard")
 
 
@@ -84,11 +87,11 @@ def upload_test(request):
 
         error = None
         if mode not in ("template", "ai"):
-            error = "Please choose a parsing mode."
+            error = t["msg_choose_parse_mode"]
         elif not subject or not title or not uploaded:
-            error = "Please fill in subject, title, and choose a file."
+            error = t["msg_upload_fill_required"]
         elif mode == "ai" and len(chosen_types) < 2:
-            error = "Pick at least 2 interactive formats for AI parsing."
+            error = t["msg_upload_ai_min_types"]
 
         parsed = None
         source = None
@@ -130,7 +133,7 @@ def upload_test(request):
                         data=q,
                         explanation=q.get("explanation", ""),
                     )
-            messages.success(request, f"Uploaded {len(parsed)} question(s).")
+            messages.success(request, t["msg_upload_success"].format(count=len(parsed)))
             return redirect("teacher_test_assign", test_id=teacher_test.id)
 
     return render(
@@ -144,6 +147,7 @@ def upload_test(request):
 def assign_test(request, test_id):
     teacher_test = get_object_or_404(TeacherTest, id=test_id, teacher=request.user)
     students = _roster(request.user)
+    t = get_strings(_current_language(request))
 
     if request.method == "POST":
         chosen_ids = request.POST.getlist("students")
@@ -180,7 +184,7 @@ def assign_test(request, test_id):
                     )
                 Assignment.objects.create(teacher_test=teacher_test, student=profile.user, test_session=session)
                 assigned_count += 1
-        messages.success(request, f"Assigned to {assigned_count} student(s).")
+        messages.success(request, t["msg_assign_success"].format(count=assigned_count))
         return redirect("teacher_dashboard")
 
     already_assigned = set(

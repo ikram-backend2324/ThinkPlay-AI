@@ -55,10 +55,13 @@ login_view = ThemedLoginView.as_view()
 
 @login_required
 def post_login_redirect(request):
-    """Closed system — no self-registration. Route each role to its own home."""
+    """
+    Closed system — no self-registration. Everyone lands on the main site
+    (with its own nav, not Django admin's separate page shell) so admin can
+    just as easily solve a test themselves as jump into /admin/ or
+    /teacher/ — both are one click away in the nav for their role.
+    """
     role = getattr(request.user, "profile", None) and request.user.profile.role
-    if role == Profile.ROLE_ADMIN:
-        return redirect("/admin/")
     if role == Profile.ROLE_TEACHER:
         return redirect("teacher_dashboard")
     return redirect("quiz_setup")
