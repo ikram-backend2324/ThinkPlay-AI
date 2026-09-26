@@ -22,6 +22,7 @@
         {% if user.is_authenticated %}
           {% if user.profile.role == "admin" %}
             <a href="/admin/">{{ t.nav_admin }}</a>
+            <a href="{% url 'teacher_dashboard' %}">{{ t.nav_teacher_panel }}</a>
           {% elif user.profile.role == "teacher" %}
             <a href="{% url 'teacher_dashboard' %}">{{ t.nav_teacher_panel }}</a>
           {% elif user.profile.role == "student" %}

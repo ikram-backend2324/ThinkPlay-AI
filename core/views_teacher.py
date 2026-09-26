@@ -26,7 +26,7 @@ def _roster(teacher):
     )
 
 
-@role_required(Profile.ROLE_TEACHER)
+@role_required(Profile.ROLE_TEACHER, Profile.ROLE_ADMIN)
 def teacher_dashboard(request):
     roster = []
     for profile in _roster(request.user):
@@ -39,7 +39,7 @@ def teacher_dashboard(request):
     return render(request, "teacher/dashboard.html", {"roster": roster, "tests": tests})
 
 
-@role_required(Profile.ROLE_TEACHER)
+@role_required(Profile.ROLE_TEACHER, Profile.ROLE_ADMIN)
 def add_student(request):
     if request.method == "POST":
         form = CreateAccountForm(request.POST)
@@ -53,7 +53,7 @@ def add_student(request):
     return render(request, "teacher/add_student.html", {"form": form})
 
 
-@role_required(Profile.ROLE_TEACHER)
+@role_required(Profile.ROLE_TEACHER, Profile.ROLE_ADMIN)
 def remove_student(request, user_id):
     profile = get_object_or_404(Profile, user_id=user_id, created_by=request.user, role=Profile.ROLE_STUDENT)
     if request.method == "POST":
@@ -63,7 +63,7 @@ def remove_student(request, user_id):
     return redirect("teacher_dashboard")
 
 
-@role_required(Profile.ROLE_TEACHER)
+@role_required(Profile.ROLE_TEACHER, Profile.ROLE_ADMIN)
 def upload_test(request):
     lang = _current_language(request)
     t = get_strings(lang)
@@ -140,7 +140,7 @@ def upload_test(request):
     )
 
 
-@role_required(Profile.ROLE_TEACHER)
+@role_required(Profile.ROLE_TEACHER, Profile.ROLE_ADMIN)
 def assign_test(request, test_id):
     teacher_test = get_object_or_404(TeacherTest, id=test_id, teacher=request.user)
     students = _roster(request.user)
@@ -194,7 +194,7 @@ def assign_test(request, test_id):
     )
 
 
-@role_required(Profile.ROLE_TEACHER)
+@role_required(Profile.ROLE_TEACHER, Profile.ROLE_ADMIN)
 def test_results(request, test_id):
     teacher_test = get_object_or_404(TeacherTest, id=test_id, teacher=request.user)
     assignments = teacher_test.assignments.select_related("student", "test_session")
