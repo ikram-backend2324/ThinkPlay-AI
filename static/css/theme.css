@@ -708,8 +708,8 @@ input:focus { outline: 2px solid var(--accent-2); outline-offset: 1px; }
   .type-grid, .chip-grid { gap: 10px; }
   .count-row { gap: 12px; }
   .count-row input[type="range"] { min-width: 140px; }
-  .setup-footer { justify-content: stretch; }
-  .setup-footer .btn { width: 100%; }
+  .setup-footer { justify-content: stretch; flex-wrap: wrap; }
+  .setup-footer .btn { flex: 1; min-width: 140px; }
 
   .quiz-wrap { padding: 18px 14px 48px; }
   .question-card { min-height: 0; }

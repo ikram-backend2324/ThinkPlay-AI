@@ -11,7 +11,16 @@ class ProfileInline(admin.StackedInline):
     model = Profile
     can_delete = False
     fk_name = "user"
-    extra = 0
+
+    def get_extra(self, request, obj=None, **kwargs):
+        # A brand-new user (obj is None on the add page, or an older account
+        # with no Profile yet) needs one blank row to actually set a role —
+        # with extra=0 the formset would render zero visible fields there,
+        # letting an account get created with no role at all.
+        return 0 if obj and hasattr(obj, "profile") else 1
+
+    def get_max_num(self, request, obj=None, **kwargs):
+        return 1
 
 
 class CustomUserAdmin(UserAdmin):

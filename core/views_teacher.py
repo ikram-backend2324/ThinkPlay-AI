@@ -76,12 +76,16 @@ def upload_test(request):
         subject = Subject.objects.filter(id=request.POST.get("subject")).first()
         title = request.POST.get("title", "").strip()
         difficulty = request.POST.get("difficulty") or None
+        if difficulty not in [code for code, _ in DIFFICULTY_CHOICES]:
+            difficulty = None
         mode = request.POST.get("mode")
         uploaded = request.FILES.get("file")
         chosen_types = [c for c in request.POST.getlist("interaction_types") if c in ALL_TYPES]
 
         error = None
-        if not subject or not title or not uploaded:
+        if mode not in ("template", "ai"):
+            error = "Please choose a parsing mode."
+        elif not subject or not title or not uploaded:
             error = "Please fill in subject, title, and choose a file."
         elif mode == "ai" and len(chosen_types) < 2:
             error = "Pick at least 2 interactive formats for AI parsing."
@@ -144,9 +148,15 @@ def assign_test(request, test_id):
     if request.method == "POST":
         chosen_ids = request.POST.getlist("students")
         template_questions = list(teacher_test.questions.all())
+        # Don't create a second concurrent pending attempt for someone who
+        # already has one outstanding for this same test.
+        already_pending = set(
+            teacher_test.assignments.filter(test_session__status=TestSession.STATUS_READY)
+            .values_list("student_id", flat=True)
+        )
         assigned_count = 0
         with transaction.atomic():
-            for profile in students.filter(user_id__in=chosen_ids):
+            for profile in students.filter(user_id__in=chosen_ids).exclude(user_id__in=already_pending):
                 session = TestSession.objects.create(
                     user=profile.user,
                     subject=teacher_test.subject,
@@ -173,7 +183,10 @@ def assign_test(request, test_id):
         messages.success(request, f"Assigned to {assigned_count} student(s).")
         return redirect("teacher_dashboard")
 
-    already_assigned = set(teacher_test.assignments.values_list("student_id", flat=True))
+    already_assigned = set(
+        teacher_test.assignments.filter(test_session__status=TestSession.STATUS_READY)
+        .values_list("student_id", flat=True)
+    )
     return render(
         request,
         "teacher/assign_test.html",
