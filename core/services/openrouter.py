@@ -16,6 +16,13 @@ OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 MAX_ATTEMPTS = 3
 REQUEST_TIMEOUT = 60
 
+DIFFICULTY_HINTS = {
+    "easy": "Easy: fundamental recall and basic definitions, suitable for a beginner.",
+    "normal": "Normal: standard coursework-level application of concepts.",
+    "hard": "Hard: multi-step reasoning, combining more than one concept per question.",
+    "expert": "Expert: advanced, nuanced edge cases that would challenge a strong student.",
+}
+
 
 class GenerationError(Exception):
     """Raised when OpenRouter can't be reached or never returns usable JSON."""
@@ -27,7 +34,7 @@ def _type_sequence(interaction_types, count):
     return [next(cycle) for _ in range(count)]
 
 
-def _build_prompt(subject_name, type_sequence, avoid_topics, language_name):
+def _build_prompt(subject_name, type_sequence, avoid_topics, language_name, difficulty=None):
     lines = [
         f"You are writing an interactive quiz on the subject: {subject_name}.",
         f"Generate exactly {len(type_sequence)} questions, in this exact order of formats:",
@@ -35,13 +42,19 @@ def _build_prompt(subject_name, type_sequence, avoid_topics, language_name):
     for i, qtype in enumerate(type_sequence, start=1):
         lines.append(f"{i}. type=\"{qtype}\" — shape: {SCHEMA_HINTS[qtype]}")
 
+    difficulty_line = DIFFICULTY_HINTS.get(difficulty)
+    consistency = (
+        "Vary the difficulty and keep every question factually correct and unambiguous."
+        if not difficulty_line
+        else f"Target this difficulty level consistently for every question: {difficulty_line} "
+        "Keep every question factually correct and unambiguous."
+    )
     lines.append(
         "\nReturn ONLY a JSON object of the form "
         '{"questions": [ <question 1>, <question 2>, ... ]} '
         "with no markdown fences and no commentary. "
         "Each question object must match the exact shape given for its type above, "
-        "including the \"type\" field. Vary the difficulty and keep every question "
-        "factually correct and unambiguous."
+        f"including the \"type\" field. {consistency}"
     )
     lines.append(
         f"\nWrite every human-readable text value (prompt, explanation, left/right terms, "
@@ -64,12 +77,15 @@ def _build_prompt(subject_name, type_sequence, avoid_topics, language_name):
     return "\n".join(lines)
 
 
-def _validate_question(raw, expected_type):
+def _validate_question(raw, expected_type=None, allowed_types=None):
     if not isinstance(raw, dict):
         return None
-    if raw.get("type") != expected_type:
+    qtype = raw.get("type")
+    if expected_type is not None and qtype != expected_type:
         return None
-    required = REQUIRED_FIELDS.get(expected_type, set())
+    if allowed_types is not None and qtype not in allowed_types:
+        return None
+    required = REQUIRED_FIELDS.get(qtype, set())
     if not required.issubset(raw.keys()):
         return None
     if not str(raw.get("prompt", "")).strip():
@@ -77,26 +93,20 @@ def _validate_question(raw, expected_type):
     return raw
 
 
-def generate_question_batch(subject_name, interaction_types, count, avoid_topics=None, language=DEFAULT_LANGUAGE):
+def _call_openrouter(model, prompt):
     """
-    Returns a list of validated question dicts (length <= count — malformed
-    entries are dropped rather than failing the whole batch). Raises
-    GenerationError if OpenRouter can't be reached at all or every attempt
-    returns unusable JSON.
+    Makes the actual request (with retries) and returns the raw list under
+    "questions" in the response — no per-question validation here, callers
+    validate against whatever shape they expect.
     """
     if not settings.OPENROUTER_API_KEY:
         raise GenerationError("OPENROUTER_API_KEY is not configured.")
-
-    type_sequence = _type_sequence(interaction_types, count)
-    language_name = AI_LANGUAGE_NAMES.get(language, AI_LANGUAGE_NAMES[DEFAULT_LANGUAGE])
-    prompt = _build_prompt(subject_name, type_sequence, avoid_topics or [], language_name)
 
     headers = {
         "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
         "X-Title": "Smart Test Platform",
     }
-    model = settings.OPENROUTER_MODEL_OVERRIDES.get(language) or settings.OPENROUTER_MODEL
     payload = {
         "model": model,
         "messages": [
@@ -119,18 +129,83 @@ def generate_question_batch(subject_name, interaction_types, count, avoid_topics
             response.raise_for_status()
             content = response.json()["choices"][0]["message"]["content"]
             parsed = json.loads(content)
-            raw_questions = parsed.get("questions", [])
+            return parsed.get("questions", [])
         except (requests.RequestException, KeyError, ValueError, json.JSONDecodeError) as exc:
             last_error = exc
-            continue
+    raise GenerationError(f"Failed to reach OpenRouter after {MAX_ATTEMPTS} attempts: {last_error}")
 
-        validated = []
-        for raw, expected in zip(raw_questions, type_sequence):
-            cleaned = _validate_question(raw, expected)
-            if cleaned is not None:
-                validated.append(cleaned)
-        if validated:
-            return validated
-        last_error = ValueError("OpenRouter response contained no valid questions.")
 
-    raise GenerationError(f"Failed to generate questions after {MAX_ATTEMPTS} attempts: {last_error}")
+def generate_question_batch(
+    subject_name, interaction_types, count, avoid_topics=None, language=DEFAULT_LANGUAGE, difficulty=None
+):
+    """
+    Returns a list of validated question dicts (length <= count — malformed
+    entries are dropped rather than failing the whole batch). Raises
+    GenerationError if OpenRouter can't be reached at all or every attempt
+    returns unusable JSON.
+    """
+    type_sequence = _type_sequence(interaction_types, count)
+    language_name = AI_LANGUAGE_NAMES.get(language, AI_LANGUAGE_NAMES[DEFAULT_LANGUAGE])
+    prompt = _build_prompt(subject_name, type_sequence, avoid_topics or [], language_name, difficulty)
+    model = settings.OPENROUTER_MODEL_OVERRIDES.get(language) or settings.OPENROUTER_MODEL
+
+    raw_questions = _call_openrouter(model, prompt)
+    validated = []
+    for raw, expected in zip(raw_questions, type_sequence):
+        cleaned = _validate_question(raw, expected_type=expected)
+        if cleaned is not None:
+            validated.append(cleaned)
+    if not validated:
+        raise GenerationError("OpenRouter response contained no valid questions.")
+    return validated
+
+
+MAX_PARSE_TEXT_CHARS = 14000
+MAX_PARSED_QUESTIONS = 80
+
+
+def _build_parse_prompt(subject_name, raw_text, interaction_types, language_name):
+    type_hints = "\n".join(f'- type="{t}" — shape: {SCHEMA_HINTS[t]}' for t in interaction_types)
+    return (
+        f"You are converting an existing exam/quiz document (subject: {subject_name}) into "
+        "structured interactive quiz questions.\n\n"
+        "Identify every distinct question in the SOURCE TEXT below (there may be anywhere "
+        f"from 1 to {MAX_PARSED_QUESTIONS}) and convert EACH one into one JSON question "
+        "object. Preserve the original questions and correct answers faithfully — do not "
+        "invent new questions, do not change what's being asked or what the correct answer "
+        "is, and do not skip any. If a question's original format doesn't map cleanly onto "
+        "one of the allowed types below, pick the closest reasonable one and adapt the "
+        "presentation without changing the substance.\n\n"
+        f"Allowed formats to convert into (pick whichever fits each question, vary them "
+        f"across the set where reasonable):\n{type_hints}\n\n"
+        'Return ONLY a JSON object of the form {"questions": [ <question 1>, ... ]} with no '
+        "markdown fences and no commentary. Each object must match the exact shape given "
+        "for its type above, including the \"type\" field.\n\n"
+        f"Write every human-readable text value in {language_name}, matching the language "
+        "the source text is already written in if it differs — preserve the source "
+        "language's content faithfully rather than translating it. Keep all JSON field/key "
+        "names and \"type\" values exactly as specified in English. For code_complete "
+        "questions, \"language\" still names a programming language and code stays code.\n\n"
+        f"SOURCE TEXT:\n{raw_text[:MAX_PARSE_TEXT_CHARS]}"
+    )
+
+
+def parse_document_to_questions(raw_text, subject_name, interaction_types, language=DEFAULT_LANGUAGE):
+    """
+    Converts the extracted text of a teacher-uploaded document into our
+    question schema via OpenRouter. Raises GenerationError if it can't be
+    reached or never returns any usable question.
+    """
+    language_name = AI_LANGUAGE_NAMES.get(language, AI_LANGUAGE_NAMES[DEFAULT_LANGUAGE])
+    prompt = _build_parse_prompt(subject_name, raw_text, interaction_types, language_name)
+    model = settings.OPENROUTER_MODEL_OVERRIDES.get(language) or settings.OPENROUTER_MODEL
+
+    raw_questions = _call_openrouter(model, prompt)
+    validated = []
+    for raw in raw_questions[:MAX_PARSED_QUESTIONS]:
+        cleaned = _validate_question(raw, allowed_types=set(interaction_types))
+        if cleaned is not None:
+            validated.append(cleaned)
+    if not validated:
+        raise GenerationError("Couldn't extract any valid questions from that document.")
+    return validated

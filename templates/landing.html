@@ -8,8 +8,7 @@
     {% if user.is_authenticated %}
       <a href="{% url 'quiz_setup' %}" class="btn btn-primary">{{ t.landing_cta_start }}</a>
     {% else %}
-      <a href="{% url 'register' %}" class="btn btn-primary">{{ t.landing_cta_register }}</a>
-      <a href="{% url 'login' %}" class="btn btn-ghost">{{ t.landing_cta_login }}</a>
+      <a href="{% url 'login' %}" class="btn btn-primary">{{ t.landing_cta_login }}</a>
     {% endif %}
   </div>
   <div class="hero-badges">

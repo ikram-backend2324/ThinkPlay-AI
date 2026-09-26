@@ -3,7 +3,7 @@ from collections import defaultdict
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login as auth_login, logout as auth_logout
+from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.db import transaction
@@ -14,10 +14,9 @@ from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from core.forms import RegisterForm
 from core.grading import grade_answer
 from core.i18n import DEFAULT_LANGUAGE, LANGUAGE_CODES, get_strings, subject_name
-from core.models import Answer, Question, Subject, TestSession
+from core.models import Answer, DIFFICULTY_CODES, Profile, Question, Subject, TestSession
 from core.question_types import ALL_TYPES, ICONS
 from core.review import describe_answer
 from core.services.openrouter import GenerationError, generate_question_batch
@@ -46,28 +45,23 @@ def landing(request):
     return render(request, "landing.html")
 
 
-def register(request):
-    if request.user.is_authenticated:
-        return redirect("quiz_setup")
-    t = get_strings(_current_language(request))
-    if request.method == "POST":
-        form = RegisterForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            auth_login(request, user)
-            messages.success(request, t["msg_welcome"].format(username=user.username))
-            return redirect("quiz_setup")
-    else:
-        form = RegisterForm()
-    return render(request, "accounts/register.html", {"form": form})
-
-
 class ThemedLoginView(LoginView):
     template_name = "accounts/login.html"
     redirect_authenticated_user = True
 
 
 login_view = ThemedLoginView.as_view()
+
+
+@login_required
+def post_login_redirect(request):
+    """Closed system — no self-registration. Route each role to its own home."""
+    role = getattr(request.user, "profile", None) and request.user.profile.role
+    if role == Profile.ROLE_ADMIN:
+        return redirect("/admin/")
+    if role == Profile.ROLE_TEACHER:
+        return redirect("teacher_dashboard")
+    return redirect("quiz_setup")
 
 
 def logout_view(request):
@@ -109,6 +103,26 @@ def history(request):
 
 
 @login_required
+def assigned_tests(request):
+    lang = _current_language(request)
+    pending = (
+        TestSession.objects.filter(
+            user=request.user, source=TestSession.SOURCE_TEACHER, status=TestSession.STATUS_READY
+        )
+        .select_related("subject", "teacher_test", "teacher_test__teacher")
+    )
+    rows = [
+        {
+            "session": s,
+            "subject_display": subject_name(s.subject, lang),
+            "teacher_name": s.teacher_test.teacher.username if s.teacher_test else "",
+        }
+        for s in pending
+    ]
+    return render(request, "accounts/assigned.html", {"rows": rows})
+
+
+@login_required
 def quiz_setup(request):
     lang = _current_language(request)
     t = get_strings(lang)
@@ -126,11 +140,15 @@ def quiz_setup(request):
         }
         for code in ALL_TYPES
     ]
+    difficulties = [
+        {"code": code, "label": t[f"difficulty_{code}"]} for code in DIFFICULTY_CODES
+    ]
 
     if request.method == "POST":
         subject_id = request.POST.get("subject")
         count = request.POST.get("count")
         chosen_types = request.POST.getlist("interaction_types")
+        difficulty = request.POST.get("difficulty")
 
         subject = Subject.objects.filter(id=subject_id).first()
         try:
@@ -138,6 +156,8 @@ def quiz_setup(request):
         except (TypeError, ValueError):
             count = 0
         chosen_types = [ctype for ctype in chosen_types if ctype in ALL_TYPES]
+        if difficulty not in DIFFICULTY_CODES:
+            difficulty = None
 
         error = None
         if not subject:
@@ -146,6 +166,8 @@ def quiz_setup(request):
             error = t["msg_count_range"].format(min=MIN_QUESTIONS, max=MAX_QUESTIONS)
         elif len(chosen_types) < 2:
             error = t["msg_min_types"]
+        elif not difficulty:
+            error = t["msg_choose_difficulty"]
 
         if error:
             messages.error(request, error)
@@ -156,6 +178,7 @@ def quiz_setup(request):
                 requested_count=count,
                 interaction_types=chosen_types,
                 language=lang,
+                difficulty=difficulty,
                 status=TestSession.STATUS_GENERATING,
             )
             return redirect("quiz_generating", session_id=session.id)
@@ -166,6 +189,7 @@ def quiz_setup(request):
         {
             "subjects": subjects,
             "interaction_types": interaction_types,
+            "difficulties": difficulties,
             "min_questions": MIN_QUESTIONS,
             "max_questions": MAX_QUESTIONS,
         },
@@ -206,6 +230,7 @@ def generate_batch(request, session_id):
             count=batch_size,
             avoid_topics=avoid_topics,
             language=session.language,
+            difficulty=session.difficulty,
         )
     except GenerationError as exc:
         if existing_count == 0:

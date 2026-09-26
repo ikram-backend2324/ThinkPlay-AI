@@ -38,6 +38,16 @@
       {% endfor %}
     </div>
 
+    <div class="section-title">{{ t.setup_section_difficulty }}</div>
+    <div class="difficulty-grid">
+      {% for d in difficulties %}
+        <label class="difficulty-card" data-difficulty-card>
+          <input type="radio" name="difficulty" value="{{ d.code }}" required>
+          <span class="label">{{ d.label }}</span>
+        </label>
+      {% endfor %}
+    </div>
+
     <div class="setup-footer">
       <button type="submit" class="btn btn-primary" id="setup-submit">{{ t.setup_submit }}</button>
     </div>
@@ -59,6 +69,14 @@
     const input = card.querySelector('input');
     input.addEventListener('change', () => {
       card.classList.toggle('selected', input.checked);
+    });
+  });
+
+  document.querySelectorAll('[data-difficulty-card]').forEach(card => {
+    const input = card.querySelector('input');
+    input.addEventListener('change', () => {
+      document.querySelectorAll('[data-difficulty-card]').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
     });
   });
 

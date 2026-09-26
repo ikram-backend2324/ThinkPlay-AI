@@ -30,6 +30,7 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 INSTALLED_APPS = [
+    'jazzmin',                       # must be above django.contrib.admin
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -118,7 +119,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # --- Auth redirects ---
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'quiz_setup'
+LOGIN_REDIRECT_URL = 'post_login_redirect'
 LOGOUT_REDIRECT_URL = 'landing'
 
 # --- OpenRouter ---
@@ -143,3 +144,57 @@ OPENROUTER_MODEL_OVERRIDES = {
 # small so each HTTP request/response stays well under typical PaaS request
 # timeouts even while the whole test (20-100+ questions) builds up.
 QUESTION_BATCH_SIZE = 8
+
+# ---------------------------------------------------------------------------
+# Jazzmin — drop-in skin for the Django admin, which is the "admin can do
+# absolutely anything" panel for this platform (full CRUD over every model).
+# ---------------------------------------------------------------------------
+JAZZMIN_SETTINGS = {
+    "site_title": "Smart Test Admin",
+    "site_header": "Smart Test",
+    "site_brand": "SMART TEST",
+    "welcome_sign": "Welcome to the Smart Test control room",
+    "copyright": "Smart Test Platform",
+    "search_model": ["auth.User", "core.TestSession"],
+    "user_avatar": None,
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "order_with_respect_to": ["auth", "core"],
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+        "core.profile": "fas fa-id-badge",
+        "core.subject": "fas fa-book",
+        "core.testsession": "fas fa-clipboard-list",
+        "core.question": "fas fa-question-circle",
+        "core.answer": "fas fa-check-circle",
+        "core.teachertest": "fas fa-file-upload",
+        "core.teacherquestion": "fas fa-list-ol",
+        "core.assignment": "fas fa-user-graduate",
+    },
+    "default_icon_parents": "fas fa-chevron-circle-right",
+    "default_icon_children": "fas fa-circle",
+    "related_modal_active": True,
+    "use_google_fonts_cdn": True,
+    "show_ui_builder": False,
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "theme": "darkly",
+    "default_theme_mode": "dark",
+    "navbar": "navbar-dark",
+    "no_navbar_border": True,
+    "navbar_fixed": True,
+    "sidebar": "sidebar-dark-primary",
+    "sidebar_fixed": True,
+    "accent": "accent-primary",
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success",
+    },
+}

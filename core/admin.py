@@ -1,6 +1,30 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import User
 
-from core.models import Answer, Question, Subject, TestSession
+from core.models import (
+    Answer, Assignment, Profile, Question, Subject, TeacherQuestion, TeacherTest, TestSession,
+)
+
+
+class ProfileInline(admin.StackedInline):
+    model = Profile
+    can_delete = False
+    fk_name = "user"
+    extra = 0
+
+
+class CustomUserAdmin(UserAdmin):
+    inlines = [ProfileInline]
+    list_display = UserAdmin.list_display + ("get_role",)
+
+    @admin.display(description="Role")
+    def get_role(self, obj):
+        return getattr(obj, "profile", None) and obj.profile.get_role_display()
+
+
+admin.site.unregister(User)
+admin.site.register(User, CustomUserAdmin)
 
 
 @admin.register(Subject)
@@ -19,8 +43,8 @@ class QuestionInline(admin.TabularInline):
 
 @admin.register(TestSession)
 class TestSessionAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "subject", "status", "score", "total_questions", "created_at")
-    list_filter = ("status", "subject")
+    list_display = ("id", "user", "subject", "source", "status", "score", "total_questions", "created_at")
+    list_filter = ("status", "source", "subject", "difficulty")
     search_fields = ("user__username",)
     inlines = [QuestionInline]
 
@@ -35,3 +59,29 @@ class QuestionAdmin(admin.ModelAdmin):
 class AnswerAdmin(admin.ModelAdmin):
     list_display = ("id", "question", "is_correct", "answered_at")
     list_filter = ("is_correct",)
+
+
+class TeacherQuestionInline(admin.TabularInline):
+    model = TeacherQuestion
+    extra = 0
+    fields = ("order", "type", "prompt")
+
+
+@admin.register(TeacherTest)
+class TeacherTestAdmin(admin.ModelAdmin):
+    list_display = ("id", "title", "teacher", "subject", "source", "difficulty", "created_at")
+    list_filter = ("source", "subject", "difficulty")
+    search_fields = ("title", "teacher__username")
+    inlines = [TeacherQuestionInline]
+
+
+@admin.register(TeacherQuestion)
+class TeacherQuestionAdmin(admin.ModelAdmin):
+    list_display = ("id", "teacher_test", "order", "type")
+    list_filter = ("type",)
+
+
+@admin.register(Assignment)
+class AssignmentAdmin(admin.ModelAdmin):
+    list_display = ("id", "teacher_test", "student", "assigned_at")
+    search_fields = ("student__username",)

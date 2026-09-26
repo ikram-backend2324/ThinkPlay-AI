@@ -3,8 +3,9 @@ Central registry of the interactive question/answer formats the app
 supports. Deliberately excludes plain multiple-choice — every format here
 requires more than "click one of four buttons" to answer.
 
-Each entry's `schema_hint` is embedded directly into the OpenRouter prompt so
-the model knows exactly which JSON shape to produce for that type.
+User-facing labels/descriptions live in core.i18n (per-language); this
+module only holds the language-agnostic bits: type codes, icons, and the
+JSON schema hints embedded directly into the OpenRouter prompt.
 """
 
 FILL_BLANK = "fill_blank"
@@ -13,26 +14,12 @@ ORDERING = "ordering"
 MULTI_SELECT = "multi_select"
 NUMERIC = "numeric"
 CODE_COMPLETE = "code_complete"
+CATEGORIZE = "categorize"
+HOTSPOT_TEXT = "hotspot_text"
 
-ALL_TYPES = [FILL_BLANK, MATCHING, ORDERING, MULTI_SELECT, NUMERIC, CODE_COMPLETE]
-
-LABELS = {
-    FILL_BLANK: "Fill in the Blank",
-    MATCHING: "Drag & Drop Matching",
-    ORDERING: "Sequence Ordering",
-    MULTI_SELECT: "Select All That Apply",
-    NUMERIC: "Numeric / Slider Answer",
-    CODE_COMPLETE: "Code Completion",
-}
-
-DESCRIPTIONS = {
-    FILL_BLANK: "Type the missing word or phrase into a sentence.",
-    MATCHING: "Drag each term onto its matching definition.",
-    ORDERING: "Drag items into the correct order or sequence.",
-    MULTI_SELECT: "Tap every option that is correct — there may be several.",
-    NUMERIC: "Drag a slider or type an exact number to answer.",
-    CODE_COMPLETE: "Complete the missing piece of code.",
-}
+ALL_TYPES = [
+    FILL_BLANK, MATCHING, ORDERING, MULTI_SELECT, NUMERIC, CODE_COMPLETE, CATEGORIZE, HOTSPOT_TEXT,
+]
 
 ICONS = {
     FILL_BLANK: "✏️",
@@ -41,6 +28,8 @@ ICONS = {
     MULTI_SELECT: "🧩",
     NUMERIC: "🎚️",
     CODE_COMPLETE: "💻",
+    CATEGORIZE: "🗂️",
+    HOTSPOT_TEXT: "🖱️",
 }
 
 SCHEMA_HINTS = {
@@ -76,6 +65,20 @@ SCHEMA_HINTS = {
         '"accepted_answers":["<exact text that completes it>", "<alt phrasing>"],'
         '"explanation":"<1 sentence>"}'
     ),
+    CATEGORIZE: (
+        '{"type":"categorize","prompt":"<instruction>",'
+        '"categories":[{"id":"c1","name":"<category name>"}, ... 2 to 4 categories],'
+        '"items":[{"id":"i1","text":"<item>","category_id":"<id of its correct category>"}, '
+        '... 5 to 10 items in SHUFFLED order, each belonging to exactly one category],'
+        '"explanation":"<1 sentence>"}'
+    ),
+    HOTSPOT_TEXT: (
+        '{"type":"hotspot_text","prompt":"<instruction, e.g. Click every verb in this sentence>",'
+        '"tokens":[{"id":"t1","text":"<single word or short chunk, in original reading order>"}, '
+        '... split the passage into 6 to 20 clickable tokens],'
+        '"correct_ids":["<id>", ... the token ids that answer the question, 1 or more],'
+        '"explanation":"<1 sentence>"}'
+    ),
 }
 
 REQUIRED_FIELDS = {
@@ -85,4 +88,6 @@ REQUIRED_FIELDS = {
     MULTI_SELECT: {"prompt", "options", "correct_ids"},
     NUMERIC: {"prompt", "answer"},
     CODE_COMPLETE: {"prompt", "code_template", "accepted_answers"},
+    CATEGORIZE: {"prompt", "categories", "items"},
+    HOTSPOT_TEXT: {"prompt", "tokens", "correct_ids"},
 }

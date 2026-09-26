@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Assigned Tests — Smart Test Platform{% endblock %}
+{% block content %}
+<div class="history-wrap">
+  <h1>{{ t.assigned_heading }}</h1>
+
+  {% if rows %}
+    {% for row in rows %}
+      <a class="panel history-row" href="{% url 'quiz_take' row.session.id %}">
+        <span class="icon">{{ row.session.subject.icon }}</span>
+        <span class="meta">
+          <div class="subj">{{ row.subject_display }} · {{ row.session.total_questions }} {{ t.history_questions_suffix }}</div>
+          <div class="date">{{ t.assigned_from_label }} {{ row.teacher_name }}</div>
+        </span>
+        <span class="btn btn-primary">{{ t.assigned_start_btn }}</span>
+      </a>
+    {% endfor %}
+  {% else %}
+    <div class="panel empty-state"><p>{{ t.assigned_empty }}</p></div>
+  {% endif %}
+</div>
+{% endblock %}

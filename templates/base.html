@@ -20,13 +20,19 @@
       <a class="brand" href="{% url 'landing' %}">✦ Smart Test</a>
       <div class="nav-links">
         {% if user.is_authenticated %}
+          {% if user.profile.role == "admin" %}
+            <a href="/admin/">{{ t.nav_admin }}</a>
+          {% elif user.profile.role == "teacher" %}
+            <a href="{% url 'teacher_dashboard' %}">{{ t.nav_teacher_panel }}</a>
+          {% elif user.profile.role == "student" %}
+            <a href="{% url 'assigned_tests' %}">{{ t.nav_assigned }}</a>
+          {% endif %}
           <a href="{% url 'quiz_setup' %}">{{ t.nav_new_test }}</a>
           <a href="{% url 'history' %}">{{ t.nav_history }}</a>
           <span>{{ user.username }}</span>
           <a href="{% url 'logout' %}" class="btn btn-ghost">{{ t.nav_logout }}</a>
         {% else %}
-          <a href="{% url 'login' %}">{{ t.nav_login }}</a>
-          <a href="{% url 'register' %}" class="btn btn-primary">{{ t.nav_get_started }}</a>
+          <a href="{% url 'login' %}" class="btn btn-primary">{{ t.nav_login }}</a>
         {% endif %}
 
         <div class="lang-switcher" id="lang-switcher">

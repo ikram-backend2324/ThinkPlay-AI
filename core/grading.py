@@ -5,7 +5,7 @@ stored `data` and the submitted answer.
 """
 
 from core.question_types import (
-    CODE_COMPLETE, FILL_BLANK, MATCHING, MULTI_SELECT, NUMERIC, ORDERING,
+    CATEGORIZE, CODE_COMPLETE, FILL_BLANK, HOTSPOT_TEXT, MATCHING, MULTI_SELECT, NUMERIC, ORDERING,
 )
 
 
@@ -53,6 +53,20 @@ def _grade_code_complete(data, submitted):
     return _normalize(submitted.get("value", "")) in accepted
 
 
+def _grade_categorize(data, submitted):
+    items = data.get("items", [])
+    submitted_map = submitted.get("assignments", {})
+    if not isinstance(submitted_map, dict) or len(submitted_map) != len(items):
+        return False
+    return all(submitted_map.get(item["id"]) == item["category_id"] for item in items)
+
+
+def _grade_hotspot_text(data, submitted):
+    # Same shape/semantics as multi_select — just presented inline in a
+    # passage instead of an isolated chip grid.
+    return _grade_multi_select(data, submitted)
+
+
 GRADERS = {
     FILL_BLANK: _grade_fill_blank,
     MATCHING: _grade_matching,
@@ -60,6 +74,8 @@ GRADERS = {
     MULTI_SELECT: _grade_multi_select,
     NUMERIC: _grade_numeric,
     CODE_COMPLETE: _grade_code_complete,
+    CATEGORIZE: _grade_categorize,
+    HOTSPOT_TEXT: _grade_hotspot_text,
 }
 
 

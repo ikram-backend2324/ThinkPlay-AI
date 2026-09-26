@@ -55,8 +55,23 @@
     prompt.textContent = q.data.prompt || "";
     container.appendChild(prompt);
 
+    const console_ = document.createElement("div");
+    console_.className = "console-window";
+    const titlebar = document.createElement("div");
+    titlebar.className = "console-titlebar";
+    titlebar.innerHTML =
+      '<span class="console-dot red"></span><span class="console-dot yellow"></span>' +
+      '<span class="console-dot green"></span><span class="console-lang">' +
+      (q.data.language || "code") + "</span>";
+    console_.appendChild(titlebar);
+
     const pre = document.createElement("pre");
     pre.className = "code-block";
+    const prompt_ = document.createElement("span");
+    prompt_.className = "console-prompt";
+    prompt_.textContent = "$ ";
+    pre.appendChild(prompt_);
+
     const parts = String(q.data.code_template || "").split("___");
     let input;
     parts.forEach((part, i) => {
@@ -71,7 +86,8 @@
         pre.appendChild(input);
       }
     });
-    container.appendChild(pre);
+    console_.appendChild(pre);
+    container.appendChild(console_);
     return () => ({ value: input ? input.value.trim() : "" });
   }
 
@@ -276,6 +292,108 @@
     };
   }
 
+  function renderCategorize(container, q, prev) {
+    const prompt = document.createElement("div");
+    prompt.className = "question-prompt";
+    prompt.textContent = q.data.prompt || "";
+    container.appendChild(prompt);
+
+    const categories = q.data.categories || [];
+    const items = shuffle(q.data.items || []);
+    const prevAssignments = (prev && prev.assignments) || {};
+
+    const wrap = document.createElement("div");
+    wrap.className = "categorize-wrap";
+
+    const poolWrap = document.createElement("div");
+    poolWrap.className = "categorize-pool-wrap";
+    poolWrap.innerHTML = `<h4>${I18N.itemsLabel || "Items"}</h4>`;
+    const pool = document.createElement("ul");
+    pool.className = "order-list categorize-pool";
+    poolWrap.appendChild(pool);
+    wrap.appendChild(poolWrap);
+
+    const bucketGrid = document.createElement("div");
+    bucketGrid.className = "categorize-buckets";
+    const bucketLists = {};
+    categories.forEach((cat) => {
+      const bucketWrap = document.createElement("div");
+      bucketWrap.className = "categorize-bucket";
+      bucketWrap.innerHTML = `<h4>${cat.name}</h4>`;
+      const list = document.createElement("ul");
+      list.className = "order-list categorize-drop";
+      list.dataset.categoryId = cat.id;
+      bucketWrap.appendChild(list);
+      bucketGrid.appendChild(bucketWrap);
+      bucketLists[cat.id] = list;
+    });
+    wrap.appendChild(bucketGrid);
+    container.appendChild(wrap);
+
+    items.forEach((item) => {
+      const li = document.createElement("li");
+      li.className = "match-item";
+      li.dataset.itemId = item.id;
+      li.textContent = item.text;
+      const assignedTo = prevAssignments[item.id];
+      if (assignedTo && bucketLists[assignedTo]) {
+        bucketLists[assignedTo].appendChild(li);
+      } else {
+        pool.appendChild(li);
+      }
+    });
+
+    if (window.Sortable) {
+      const groupName = "categorize-" + q.id;
+      new Sortable(pool, { group: groupName, animation: 150 });
+      Object.values(bucketLists).forEach((list) => {
+        new Sortable(list, { group: groupName, animation: 150 });
+      });
+    }
+
+    return () => {
+      const assignments = {};
+      Object.entries(bucketLists).forEach(([catId, list]) => {
+        Array.from(list.children).forEach((li) => {
+          assignments[li.dataset.itemId] = catId;
+        });
+      });
+      return { assignments };
+    };
+  }
+
+  function renderHotspotText(container, q, prev) {
+    const prompt = document.createElement("div");
+    prompt.className = "question-prompt";
+    prompt.textContent = q.data.prompt || "";
+    container.appendChild(prompt);
+
+    const passage = document.createElement("div");
+    passage.className = "hotspot-passage";
+    const selected = new Set((prev && prev.selected_ids) || []);
+
+    (q.data.tokens || []).forEach((tok) => {
+      const span = document.createElement("span");
+      span.className = "hotspot-token" + (selected.has(tok.id) ? " selected" : "");
+      span.textContent = tok.text;
+      span.dataset.id = tok.id;
+      span.addEventListener("click", () => {
+        if (selected.has(tok.id)) {
+          selected.delete(tok.id);
+          span.classList.remove("selected");
+        } else {
+          selected.add(tok.id);
+          span.classList.add("selected");
+        }
+      });
+      passage.appendChild(span);
+      passage.appendChild(document.createTextNode(" "));
+    });
+
+    container.appendChild(passage);
+    return () => ({ selected_ids: Array.from(selected) });
+  }
+
   const RENDERERS = {
     fill_blank: renderFillBlank,
     matching: renderMatching,
@@ -283,6 +401,8 @@
     multi_select: renderMultiSelect,
     numeric: renderNumeric,
     code_complete: renderCodeComplete,
+    categorize: renderCategorize,
+    hotspot_text: renderHotspotText,
   };
 
   function renderQuestion(index) {

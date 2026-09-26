@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Test Results — Smart Test Platform{% endblock %}
+{% block content %}
+<div class="history-wrap">
+  <h1>{{ t.test_results_heading }}</h1>
+  <p class="lead">{{ teacher_test.title }} · {{ teacher_test.subject.name }}</p>
+
+  {% if assignments %}
+    {% for a in assignments %}
+      <div class="panel history-row">
+        <span class="icon">🎓</span>
+        <span class="meta">
+          <div class="subj">{{ a.student.username }}</div>
+          <div class="date">{{ a.test_session.get_status_display }}</div>
+        </span>
+        <span class="history-score">
+          {% if a.test_session.status == "completed" %}{{ a.test_session.percentage }}%{% else %}—{% endif %}
+        </span>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="panel empty-state"><p>{{ t.test_results_empty }}</p></div>
+  {% endif %}
+</div>
+{% endblock %}

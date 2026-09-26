@@ -4,7 +4,7 @@ answer" strings for the read-only review page.
 """
 
 from core.question_types import (
-    CODE_COMPLETE, FILL_BLANK, MATCHING, MULTI_SELECT, NUMERIC, ORDERING,
+    CATEGORIZE, CODE_COMPLETE, FILL_BLANK, HOTSPOT_TEXT, MATCHING, MULTI_SELECT, NUMERIC, ORDERING,
 )
 
 
@@ -55,6 +55,26 @@ def _code_complete(data, submitted, t):
     return your, correct
 
 
+def _categorize(data, submitted, t):
+    categories = {c["id"]: c["name"] for c in data.get("categories", [])}
+    submitted_map = submitted.get("assignments", {})
+    your_lines = []
+    correct_lines = []
+    for item in data.get("items", []):
+        your_cat = categories.get(submitted_map.get(item["id"]), t["quiz_unmatched"])
+        correct_cat = categories.get(item["category_id"], "?")
+        your_lines.append(f"{item['text']} → {your_cat}")
+        correct_lines.append(f"{item['text']} → {correct_cat}")
+    return "; ".join(your_lines), "; ".join(correct_lines)
+
+
+def _hotspot_text(data, submitted, t):
+    tokens = {tok["id"]: tok["text"] for tok in data.get("tokens", [])}
+    your = ", ".join(tokens.get(i, "?") for i in submitted.get("selected_ids", []))
+    correct = ", ".join(tokens.get(i, "?") for i in data.get("correct_ids", []))
+    return your or t["quiz_no_answer"], correct
+
+
 DESCRIBERS = {
     FILL_BLANK: _fill_blank,
     MATCHING: _matching,
@@ -62,6 +82,8 @@ DESCRIBERS = {
     MULTI_SELECT: _multi_select,
     NUMERIC: _numeric,
     CODE_COMPLETE: _code_complete,
+    CATEGORIZE: _categorize,
+    HOTSPOT_TEXT: _hotspot_text,
 }
 
 

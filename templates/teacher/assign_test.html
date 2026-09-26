@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Assign Test — Smart Test Platform{% endblock %}
+{% block content %}
+<div class="setup-wrap">
+  <h1>{{ t.assign_test_heading }}</h1>
+  <p class="lead">{{ teacher_test.title }} · {{ teacher_test.subject.name }}</p>
+
+  {% if students %}
+    <div class="section-title">{{ t.assign_select_students }}</div>
+    <form method="post">
+      {% csrf_token %}
+      <div class="type-grid">
+        {% for profile in students %}
+          <label class="type-card" data-type-card>
+            <input type="checkbox" name="students" value="{{ profile.user.id }}">
+            <div class="label">{{ profile.user.username }}</div>
+            {% if profile.user.id in already_assigned %}
+              <div class="desc">{{ t.assign_already_label }}</div>
+            {% endif %}
+          </label>
+        {% endfor %}
+      </div>
+      <div class="setup-footer">
+        <button type="submit" class="btn btn-primary">{{ t.assign_submit }}</button>
+      </div>
+    </form>
+  {% else %}
+    <div class="panel empty-state"><p>{{ t.assign_no_students }}</p></div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.querySelectorAll('[data-type-card]').forEach(card => {
+    const input = card.querySelector('input');
+    input.addEventListener('change', () => card.classList.toggle('selected', input.checked));
+  });
+</script>
+{% endblock %}

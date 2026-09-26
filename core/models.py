@@ -65,6 +65,7 @@ class TeacherTest(models.Model):
     title = models.CharField(max_length=120)
     difficulty = models.CharField(max_length=10, choices=DIFFICULTY_CHOICES, null=True, blank=True)
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES)
+    language = models.CharField(max_length=8, default="en")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

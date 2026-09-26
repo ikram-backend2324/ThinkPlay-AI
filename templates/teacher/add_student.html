@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Register — Smart Test Platform{% endblock %}
+{% block title %}Add Student — Smart Test Platform{% endblock %}
 {% block content %}
 <div class="center-stage">
   <div class="panel form-panel">
-    <h2>{{ t.register_heading }}</h2>
+    <h2>{{ t.add_student_heading }}</h2>
     {% if form.non_field_errors %}
       <ul class="form-errors">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
     {% endif %}
@@ -28,9 +28,8 @@
         {{ form.password2 }}
         {{ form.password2.errors }}
       </div>
-      <button type="submit" class="btn btn-primary btn-block">{{ t.btn_create_account }}</button>
+      <button type="submit" class="btn btn-primary btn-block">{{ t.btn_create_student }}</button>
     </form>
-    <p class="help-text">{{ t.already_have_account }} <a href="{% url 'login' %}">{{ t.login_link }}</a></p>
   </div>
 </div>
 {% endblock %}

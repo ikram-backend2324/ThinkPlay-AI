@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Teacher Panel — Smart Test Platform{% endblock %}
+{% block content %}
+<div class="history-wrap">
+  <h1>{{ t.teacher_dashboard_heading }}</h1>
+  <p class="lead">{{ t.teacher_practice_note }}</p>
+
+  <div class="section-title">{{ t.teacher_roster_heading }}</div>
+  <a href="{% url 'teacher_add_student' %}" class="btn btn-primary" style="margin-bottom:18px;">{{ t.teacher_add_student_btn }}</a>
+
+  {% if roster %}
+    {% for row in roster %}
+      <div class="panel history-row">
+        <span class="icon">🎓</span>
+        <span class="meta">
+          <div class="subj">{{ row.user.username }}</div>
+          <div class="date">
+            {% if row.avg_pct is not None %}{{ row.attempts }} · {{ row.avg_pct }}% {{ t.teacher_avg_label }}{% else %}—{% endif %}
+          </div>
+        </span>
+        <form method="post" action="{% url 'teacher_remove_student' row.user.id %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-ghost" onclick="return confirm('{{ t.remove_student_heading|escapejs }}')">{{ t.teacher_remove_btn }}</button>
+        </form>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="panel empty-state"><p>{{ t.teacher_roster_empty }}</p></div>
+  {% endif %}
+
+  <div class="section-title">{{ t.teacher_tests_heading }}</div>
+  <a href="{% url 'teacher_upload_test' %}" class="btn btn-primary" style="margin-bottom:18px;">{{ t.teacher_upload_test_btn }}</a>
+
+  {% if tests %}
+    {% for test in tests %}
+      <div class="panel history-row">
+        <span class="icon">{{ test.subject.icon }}</span>
+        <span class="meta">
+          <div class="subj">{{ test.title }} · {{ test.subject.name }}</div>
+          <div class="date">{{ test.created_at|date:"M d, Y" }}</div>
+        </span>
+        <a href="{% url 'teacher_test_assign' test.id %}" class="btn btn-ghost">{{ t.teacher_assign_btn }}</a>
+        <a href="{% url 'teacher_test_results' test.id %}" class="btn btn-ghost">{{ t.teacher_results_btn }}</a>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="panel empty-state"><p>{{ t.teacher_tests_empty }}</p></div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
 
 from core import views
 
@@ -9,9 +9,9 @@ urlpatterns = [
     path('', views.landing, name='landing'),
     path('set-language/', views.set_language_view, name='set_language'),
 
-    path('accounts/register/', views.register, name='register'),
     path('accounts/login/', views.login_view, name='login'),
     path('accounts/logout/', views.logout_view, name='logout'),
+    path('accounts/post-login/', views.post_login_redirect, name='post_login_redirect'),
     path('accounts/history/', views.history, name='history'),
 
     path('quiz/setup/', views.quiz_setup, name='quiz_setup'),
@@ -22,4 +22,8 @@ urlpatterns = [
     path('quiz/<int:session_id>/abandon/', views.quiz_abandon, name='quiz_abandon'),
     path('quiz/<int:session_id>/results/', views.quiz_results, name='quiz_results'),
     path('quiz/<int:session_id>/review/', views.quiz_review, name='quiz_review'),
+
+    path('assigned/', views.assigned_tests, name='assigned_tests'),
+
+    path('teacher/', include('core.urls_teacher')),
 ]
