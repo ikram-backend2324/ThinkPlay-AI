@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ t.offline_heading }}{% endblock %}
+{% block content %}
+<div class="history-wrap">
+  <div class="panel empty-state">
+    <h1>📴 {{ t.offline_heading }}</h1>
+    <p>{{ t.offline_body }}</p>
+    <button type="button" class="btn btn-primary" onclick="location.reload()">{{ t.offline_retry }}</button>
+  </div>
+</div>
+{% endblock %}

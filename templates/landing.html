@@ -1,16 +1,47 @@
 {% extends "base.html" %}
-{% block title %}Smart Test Platform — AI-Powered Interactive Tests{% endblock %}
+{% block title %}Teaching Excellence{% endblock %}
 {% block content %}
 <section class="hero" id="hero">
+  <p class="eyebrow">TeachX · Teaching Excellence</p>
   <h1>{{ t.landing_title }}</h1>
   <p>{{ t.landing_sub }}</p>
   <div class="hero-actions">
     {% if user.is_authenticated %}
-      <a href="{% url 'quiz_setup' %}" class="btn btn-primary">{{ t.landing_cta_start }}</a>
+      {% if user.profile.role == "student" %}
+        <a href="{% url 'assigned_tests' %}" class="btn btn-primary">{{ t.nav_assigned }}</a>
+      {% else %}
+        <a href="{% url 'teacher_lesson_plan_new' %}" class="btn btn-primary">🧭 {{ t.action_design_lesson }}</a>
+      {% endif %}
+      <a href="{% url 'quiz_setup' %}" class="btn btn-ghost">{{ t.landing_cta_start }}</a>
     {% else %}
       <a href="{% url 'login' %}" class="btn btn-primary">{{ t.landing_cta_login }}</a>
+      <a href="{% url 'guide' %}" class="btn btn-ghost">📘 {{ t.nav_guide }}</a>
     {% endif %}
   </div>
+
+  <div class="feature-grid">
+    <div class="panel feature-card">
+      <span class="icon">🧭</span>
+      <h3>{{ t.feature_plan_title }}</h3>
+      <p>{{ t.feature_plan_body }}</p>
+    </div>
+    <div class="panel feature-card">
+      <span class="icon">🧩</span>
+      <h3>{{ t.feature_tests_title }}</h3>
+      <p>{{ t.feature_tests_body }}</p>
+    </div>
+    <div class="panel feature-card">
+      <span class="icon">🏆</span>
+      <h3>{{ t.feature_motivation_title }}</h3>
+      <p>{{ t.feature_motivation_body }}</p>
+    </div>
+    <div class="panel feature-card">
+      <span class="icon">📴</span>
+      <h3>{{ t.feature_offline_title }}</h3>
+      <p>{{ t.feature_offline_body }}</p>
+    </div>
+  </div>
+
   <div class="hero-badges">
     <span class="badge">{{ t.badge_matching }}</span>
     <span class="badge">{{ t.badge_ordering }}</span>
@@ -24,11 +55,11 @@
 
 {% block extra_scripts %}
 <script>
-  if (window.gsap) {
+  if (window.gsap && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     gsap.from("#hero h1", { y: 30, opacity: 0, duration: 0.9, ease: "power3.out" });
-    gsap.from("#hero p", { y: 20, opacity: 0, duration: 0.9, delay: 0.15, ease: "power3.out" });
+    gsap.from("#hero > p", { y: 20, opacity: 0, duration: 0.9, delay: 0.15, ease: "power3.out" });
     gsap.from(".hero-actions .btn", { y: 20, opacity: 0, duration: 0.7, delay: 0.3, stagger: 0.1, ease: "power3.out" });
-    gsap.from(".hero-badges .badge", { y: 14, opacity: 0, duration: 0.6, delay: 0.5, stagger: 0.06, ease: "power2.out" });
+    gsap.from(".feature-card", { y: 24, opacity: 0, duration: 0.6, delay: 0.45, stagger: 0.08, ease: "power2.out" });
   }
 </script>
 {% endblock %}

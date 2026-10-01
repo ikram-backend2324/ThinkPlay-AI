@@ -4,35 +4,49 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Smart Test Platform{% endblock %}</title>
+  <title>{% block title %}TeachX{% endblock %} · TeachX</title>
+  <meta name="description" content="TeachX — Teaching Excellence: AI methodological assistant and interactive tests for teachers and students.">
+  <meta name="theme-color" content="#0b0b14">
+  <link rel="manifest" href="{% url 'manifest' %}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{% static 'icons/icon-192.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'icons/icon-192.png' %}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/theme.css' %}">
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <link rel="stylesheet" href="{% static 'css/teachx.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
-  <canvas id="bg-canvas"></canvas>
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+  <div class="offline-banner" id="offline-banner" hidden>📴 {{ t.offline_banner }}</div>
+  <div class="outbox-banner" id="outbox-banner" hidden></div>
 
   <div class="page">
     <nav class="navbar">
-      <a class="brand" href="{% url 'landing' %}">✦ Smart Test</a>
+      <a class="brand" href="{% url 'landing' %}">✦ TeachX</a>
       <div class="nav-links">
         {% if user.is_authenticated %}
           {% if user.profile.role == "admin" %}
             <a href="/admin/">{{ t.nav_admin }}</a>
             <a href="{% url 'teacher_dashboard' %}">{{ t.nav_teacher_panel }}</a>
+            <a href="{% url 'teacher_lesson_plans' %}">{{ t.nav_lessons }}</a>
           {% elif user.profile.role == "teacher" %}
             <a href="{% url 'teacher_dashboard' %}">{{ t.nav_teacher_panel }}</a>
+            <a href="{% url 'teacher_lesson_plans' %}">{{ t.nav_lessons }}</a>
           {% elif user.profile.role == "student" %}
             <a href="{% url 'assigned_tests' %}">{{ t.nav_assigned }}</a>
+            <a href="{% url 'materials' %}">{{ t.nav_materials }}</a>
           {% endif %}
           <a href="{% url 'quiz_setup' %}">{{ t.nav_new_test }}</a>
           <a href="{% url 'history' %}">{{ t.nav_history }}</a>
-          <span>{{ user.username }}</span>
-          <a href="{% url 'logout' %}" class="btn btn-ghost">{{ t.nav_logout }}</a>
+          <a href="{% url 'leaderboard' %}">{{ t.nav_leaderboard }}</a>
+          <span class="nav-user">{{ user.username }}</span>
+          <a href="{% url 'logout' %}" class="btn btn-ghost" id="logout-link">{{ t.nav_logout }}</a>
         {% else %}
+          <a href="{% url 'guide' %}">{{ t.nav_guide }}</a>
           <a href="{% url 'login' %}" class="btn btn-primary">{{ t.nav_login }}</a>
         {% endif %}
 
@@ -63,22 +77,29 @@
     {% endif %}
 
     {% block content %}{% endblock %}
+
+    <footer class="site-footer">
+      <a href="{% url 'guide' %}">{{ t.nav_guide }}</a>
+      <span>·</span>
+      <span>TeachX — Teaching Excellence</span>
+    </footer>
   </div>
 
+  {# Scripts load at the end of <body> so they never block the first paint. #}
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
   <script src="{% static 'js/three-bg.js' %}"></script>
   <script>
-    (function () {
-      const btn = document.getElementById('lang-btn');
-      const menu = document.getElementById('lang-menu');
-      const wrap = document.getElementById('lang-switcher');
-      if (!btn || !menu) return;
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        wrap.classList.toggle('open');
-      });
-      document.addEventListener('click', () => wrap.classList.remove('open'));
-    })();
+    window.TEACHX = {
+      authenticated: {{ user.is_authenticated|yesno:"true,false" }},
+      i18n: {
+        outboxSent: "{{ t.outbox_sent|escapejs }}",
+        outboxPending: "{{ t.outbox_pending|escapejs }}",
+        outboxView: "{{ t.outbox_view|escapejs }}",
+      },
+    };
   </script>
+  <script src="{% static 'js/app.js' %}"></script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>

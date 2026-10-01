@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ t.lesson_plans_heading }}{% endblock %}
+{% block content %}
+<div class="history-wrap">
+  <h1>🧭 {{ t.lesson_plans_heading }}</h1>
+  <p class="lead">{{ t.lesson_plans_lead }}</p>
+  <div class="tab-row">
+    <a href="{% url 'teacher_lesson_plan_new' %}" class="btn btn-primary">+ {{ t.lesson_plan_new_btn }}</a>
+    <a href="{% url 'guide' %}" class="btn btn-ghost">📘 {{ t.nav_guide }}</a>
+  </div>
+
+  {% if plans %}
+    {% for plan in plans %}
+      <a class="panel history-row" href="{% url 'teacher_lesson_plan' plan.id %}">
+        <span class="icon">{% if plan.subject %}{{ plan.subject.icon }}{% else %}🧭{% endif %}</span>
+        <span class="meta">
+          <div class="subj">{{ plan.topic }}</div>
+          <div class="date">{{ plan.created_at|date:"d.m.Y H:i" }}{% if plan.ai_generated %} · ✨ AI{% endif %}</div>
+        </span>
+        <span class="btn btn-ghost">{{ t.open_btn }}</span>
+      </a>
+    {% endfor %}
+  {% else %}
+    <div class="panel empty-state"><p>{{ t.lesson_plans_empty }}</p></div>
+  {% endif %}
+</div>
+{% endblock %}

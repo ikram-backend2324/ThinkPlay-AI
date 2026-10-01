@@ -24,6 +24,16 @@ urlpatterns = [
     path('quiz/<int:session_id>/review/', views.quiz_review, name='quiz_review'),
 
     path('assigned/', views.assigned_tests, name='assigned_tests'),
+    path('leaderboard/', views.leaderboard_view, name='leaderboard'),
+    path('materials/', views.materials, name='materials'),
+    path('materials/<int:lecture_id>/', views.material_detail, name='material_detail'),
+    path('guide/', views.guide, name='guide'),
+
+    # Offline support (PWA). The service worker must be served from the site
+    # root so its scope covers every page.
+    path('sw.js', views.service_worker, name='service_worker'),
+    path('manifest.webmanifest', views.manifest, name='manifest'),
+    path('offline/', views.offline, name='offline'),
 
     path('teacher/', include('core.urls_teacher')),
 ]

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load i18n_extras %}
-{% block title %}Review — Smart Test Platform{% endblock %}
+{% block title %}{{ t.review_suffix }}{% endblock %}
 {% block content %}
 <div class="history-wrap">
   <h1>{{ session.subject.icon }} {{ session.subject|localized_subject:LANG }} — {{ t.review_suffix }}</h1>

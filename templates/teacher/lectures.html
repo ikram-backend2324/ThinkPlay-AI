@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ t.lectures_heading }}{% endblock %}
+{% block content %}
+<div class="setup-wrap">
+  <h1>📚 {{ t.lectures_heading }}</h1>
+  <p class="lead">{{ t.lectures_lead }}</p>
+
+  {% if rows %}
+    {% for row in rows %}
+      <div class="panel history-row">
+        <span class="icon">{{ row.lecture.subject.icon }}</span>
+        <span class="meta">
+          <div class="subj">{{ row.lecture.title }}</div>
+          <div class="date">{{ row.subject_display }} · {{ row.lecture.text|length }} {{ t.lecture_chars_suffix }} · {{ row.lecture.created_at|date:"d.m.Y" }}</div>
+        </span>
+        <a href="{% url 'material_detail' row.lecture.id %}" class="btn btn-ghost">{{ t.materials_read_btn }}</a>
+        <a href="{% url 'teacher_lecture_test' row.lecture.id %}" class="btn btn-primary">✨ {{ t.lecture_make_test_btn }}</a>
+        <form method="post" action="{% url 'teacher_lecture_delete' row.lecture.id %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-ghost" onclick="return confirm('{{ t.lecture_delete_confirm|escapejs }}')">{{ t.delete_btn }}</button>
+        </form>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="panel empty-state"><p>{{ t.lectures_empty }}</p></div>
+  {% endif %}
+
+  <div class="section-title">{{ t.lecture_add_heading }}</div>
+  <form method="post" enctype="multipart/form-data" class="panel form-card" data-busy="{{ t.working }}">
+    {% csrf_token %}
+    <div class="field">
+      <label>{{ t.label_subject }}</label>
+      <div class="subject-grid">
+        {% for subject in subjects %}
+          <label class="subject-card" data-choice>
+            <input type="radio" name="subject" value="{{ subject.id }}" required>
+            <span class="icon">{{ subject.icon }}</span>
+            <span class="name">{{ subject.name }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="field">
+      <label for="lecture-title">{{ t.label_title }}</label>
+      <input type="text" name="title" id="lecture-title" required maxlength="160">
+    </div>
+    <div class="field">
+      <label for="lecture-text">{{ t.lecture_text_label }}</label>
+      <textarea name="text" id="lecture-text" rows="10" placeholder="{{ t.lecture_text_placeholder }}"></textarea>
+    </div>
+    <div class="field">
+      <label>{{ t.lecture_file_label }}</label>
+      <label class="file-picker">
+        <input type="file" name="file" accept=".docx,.pdf" id="lecture-file">
+        <span class="btn btn-ghost">📎 {{ t.choose_file }}</span>
+        <span class="file-name" id="lecture-file-name">{{ t.no_file_chosen }}</span>
+      </label>
+    </div>
+    <div class="setup-footer">
+      <button type="submit" class="btn btn-primary">{{ t.lecture_save_btn }}</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    const file = document.getElementById('lecture-file');
+    const name = document.getElementById('lecture-file-name');
+    file.addEventListener('change', () => {
+      name.textContent = file.files.length ? file.files[0].name : "{{ t.no_file_chosen|escapejs }}";
+    });
+  })();
+</script>
+{% endblock %}

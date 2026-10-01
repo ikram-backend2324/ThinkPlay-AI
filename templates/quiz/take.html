@@ -1,10 +1,7 @@
 {% extends "base.html" %}
 {% load static i18n_extras %}
-{% block title %}{{ session.subject|localized_subject:LANG }} Test — Smart Test Platform{% endblock %}
+{% block title %}{{ session.subject|localized_subject:LANG }} Test{% endblock %}
 
-{% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-{% endblock %}
 
 {% block content %}
 <div class="quiz-wrap">
@@ -27,8 +24,10 @@
 
 {% block extra_scripts %}
 {{ questions|json_script:"questions-data" }}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
   window.QUIZ_CONFIG = {
+    sessionId: {{ session.id }},
     submitUrl: "{% url 'quiz_submit' session.id %}",
     resultsUrl: "{% url 'quiz_results' session.id %}",
   };
@@ -44,6 +43,8 @@
     definitions: "{{ t.quiz_definitions|escapejs }}",
     dropHere: "{{ t.quiz_drop_here|escapejs }}",
     itemsLabel: "{{ t.quiz_items|escapejs }}",
+    offlineSavedTitle: "{{ t.quiz_offline_saved_title|escapejs }}",
+    offlineSavedBody: "{{ t.quiz_offline_saved_body|escapejs }}",
     typeLabels: {
       fill_blank: "{{ t.type_label_fill_blank|escapejs }}",
       matching: "{{ t.type_label_matching|escapejs }}",

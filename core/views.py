@@ -1,5 +1,6 @@
 import json
 from collections import defaultdict
+from datetime import timedelta
 
 from django.conf import settings
 from django.contrib import messages
@@ -14,9 +15,11 @@ from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
+from core import scaffold
+from core.gamification import BADGES, award_badges, badge_label, clean_seconds, leaderboard, score_answer
 from core.grading import grade_answer
 from core.i18n import DEFAULT_LANGUAGE, LANGUAGE_CODES, get_strings, subject_name
-from core.models import Answer, DIFFICULTY_CODES, Profile, Question, Subject, TestSession
+from core.models import Answer, DIFFICULTY_CODES, Lecture, Profile, Question, Subject, TestSession
 from core.question_types import ALL_TYPES, ICONS
 from core.review import describe_answer
 from core.services.openrouter import GenerationError, generate_question_batch
@@ -102,7 +105,79 @@ def history(request):
         key=lambda row: -row["avg_pct"],
     )
 
-    return render(request, "accounts/history.html", {"sessions": sessions, "subject_stats": subject_stats})
+    t = get_strings(lang)
+    badges = [
+        {"emoji": BADGES.get(b.code, "🏅"), "label": badge_label(b, t, subject_name(b.subject, lang) if b.subject else "")}
+        for b in request.user.badges.select_related("subject", "teacher_test")
+    ]
+    total_points = sum(s.points for s in sessions)
+    return render(
+        request,
+        "accounts/history.html",
+        {"sessions": sessions, "subject_stats": subject_stats, "badges": badges, "total_points": total_points},
+    )
+
+
+@login_required
+def leaderboard_view(request):
+    period = request.GET.get("period", "all")
+    since = timezone.now() - timedelta(days=7) if period == "week" else None
+    rows = leaderboard(request.user, since=since)
+    return render(request, "accounts/leaderboard.html", {"rows": rows, "period": period})
+
+
+def _teacher_of(user):
+    """The teacher whose materials a user can see: themselves for teachers/admins, their creator for students."""
+    profile = getattr(user, "profile", None)
+    if profile is None:
+        return None
+    if profile.role in (Profile.ROLE_TEACHER, Profile.ROLE_ADMIN):
+        return user
+    return profile.created_by
+
+
+@login_required
+def materials(request):
+    lang = _current_language(request)
+    teacher = _teacher_of(request.user)
+    lectures = Lecture.objects.filter(teacher=teacher).select_related("subject") if teacher else Lecture.objects.none()
+    rows = [{"lecture": lec, "subject_display": subject_name(lec.subject, lang)} for lec in lectures]
+    return render(request, "accounts/materials.html", {"rows": rows})
+
+
+@login_required
+def material_detail(request, lecture_id):
+    lecture = get_object_or_404(Lecture, id=lecture_id, teacher=_teacher_of(request.user))
+    paragraphs = [p.strip() for p in lecture.text.split("\n") if p.strip()]
+    return render(request, "accounts/material_detail.html", {"lecture": lecture, "paragraphs": paragraphs})
+
+
+# ------------------------------------------------------------ SCAFFOLD guide
+
+def guide(request):
+    lang = _current_language(request)
+    return render(
+        request,
+        "guide/index.html",
+        {"sc": scaffold.localized(lang), "source_title": scaffold.SOURCE_TITLE, "source_url": scaffold.SOURCE_URL,
+         "license_url": scaffold.LICENSE_URL},
+    )
+
+
+# ------------------------------------------------------------- offline (PWA)
+
+def service_worker(request):
+    response = render(request, "pwa/sw.js", {"version": settings.PWA_CACHE_VERSION}, content_type="application/javascript")
+    response["Cache-Control"] = "no-cache"
+    return response
+
+
+def manifest(request):
+    return render(request, "pwa/manifest.webmanifest", {}, content_type="application/manifest+json")
+
+
+def offline(request):
+    return render(request, "pwa/offline.html")
 
 
 @login_required
@@ -153,7 +228,7 @@ def quiz_setup(request):
         chosen_types = request.POST.getlist("interaction_types")
         difficulty = request.POST.get("difficulty")
 
-        subject = Subject.objects.filter(id=subject_id).first()
+        subject = Subject.objects.from_form(subject_id)
         try:
             count = int(count)
         except (TypeError, ValueError):
@@ -298,19 +373,28 @@ def quiz_submit(request, session_id):
     try:
         payload = json.loads(request.body)
         answers = payload.get("answers", {})
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, AttributeError):
+        payload, answers = {}, {}
+
+    times = payload.get("times", {}) if isinstance(payload, dict) else {}
+    if not isinstance(answers, dict):
         answers = {}
+    if not isinstance(times, dict):
+        times = {}
 
     questions = list(session.questions.all())
-    score = 0
+    score = points = bonus_total = 0
     answer_objs = []
     for question in questions:
         submitted = answers.get(str(question.id), {})
         is_correct = grade_answer(question.type, question.data, submitted)
-        if is_correct:
-            score += 1
+        seconds = clean_seconds(times.get(str(question.id)))
+        earned, bonus = score_answer(question.type, is_correct, seconds)
+        score += int(is_correct)
+        points += earned
+        bonus_total += bonus
         answer_objs.append(
-            Answer(question=question, submitted_data=submitted, is_correct=is_correct)
+            Answer(question=question, submitted_data=submitted, is_correct=is_correct, time_spent=seconds)
         )
 
     with transaction.atomic():
@@ -318,9 +402,12 @@ def quiz_submit(request, session_id):
         Answer.objects.bulk_create(answer_objs)
         session.score = score
         session.total_questions = len(questions)
+        session.points = points
+        session.speed_bonus = bonus_total
         session.status = TestSession.STATUS_COMPLETED
         session.completed_at = timezone.now()
-        session.save(update_fields=["score", "total_questions", "status", "completed_at"])
+        session.save(update_fields=["score", "total_questions", "points", "speed_bonus", "status", "completed_at"])
+        award_badges(session)
 
     return JsonResponse({"redirect": reverse_lazy("quiz_results", args=[session.id])})
 
@@ -342,7 +429,13 @@ def quiz_results(request, session_id):
     session = get_object_or_404(TestSession, id=session_id, user=request.user)
     if session.status != TestSession.STATUS_COMPLETED:
         return redirect("quiz_take", session_id=session.id)
-    return render(request, "quiz/results.html", {"session": session})
+    lang = _current_language(request)
+    t = get_strings(lang)
+    badges = [
+        {"emoji": BADGES.get(b.code, "🏅"), "label": badge_label(b, t, subject_name(b.subject, lang) if b.subject else "")}
+        for b in session.badges.select_related("subject", "teacher_test")
+    ]
+    return render(request, "quiz/results.html", {"session": session, "badges": badges})
 
 
 @login_required

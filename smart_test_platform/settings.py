@@ -145,16 +145,20 @@ OPENROUTER_MODEL_OVERRIDES = {
 # timeouts even while the whole test (20-100+ questions) builds up.
 QUESTION_BATCH_SIZE = 8
 
+# Bump to make every browser drop its offline copies (service worker caches)
+# after a deploy that changes cached pages or static files.
+PWA_CACHE_VERSION = os.environ.get("PWA_CACHE_VERSION", "teachx-v1")
+
 # ---------------------------------------------------------------------------
 # Jazzmin — drop-in skin for the Django admin, which is the "admin can do
 # absolutely anything" panel for this platform (full CRUD over every model).
 # ---------------------------------------------------------------------------
 JAZZMIN_SETTINGS = {
-    "site_title": "Smart Test Admin",
-    "site_header": "Smart Test",
-    "site_brand": "SMART TEST",
-    "welcome_sign": "Welcome to the Smart Test control room",
-    "copyright": "Smart Test Platform",
+    "site_title": "TeachX Admin",
+    "site_header": "TeachX",
+    "site_brand": "TEACHX",
+    "welcome_sign": "Welcome to the TeachX control room",
+    "copyright": "TeachX — Teaching Excellence",
     "search_model": ["auth.User", "core.TestSession"],
     "user_avatar": None,
     "show_sidebar": True,

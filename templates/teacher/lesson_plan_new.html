@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}{{ t.lesson_plan_new_heading }}{% endblock %}
+{% block content %}
+<div class="setup-wrap">
+  <h1>🧭 {{ t.lesson_plan_new_heading }}</h1>
+  <p class="lead">{{ t.lesson_plan_new_lead }}</p>
+
+  <form method="post" id="plan-form" data-busy="{{ t.plan_busy }}">
+    {% csrf_token %}
+
+    {# Step 1 — setting #}
+    <div class="section-title">1. {{ t.plan_step_setting }}</div>
+    <div class="panel form-card">
+      <div class="field">
+        <label for="plan-topic">{{ t.label_topic }} *</label>
+        <input type="text" name="topic" id="plan-topic" required maxlength="200" value="{{ form.topic }}" placeholder="{{ t.topic_placeholder }}">
+      </div>
+      <div class="field">
+        <label for="plan-subject">{{ t.label_subject }}</label>
+        <select name="subject" id="plan-subject">
+          <option value="">—</option>
+          {% for s in subjects %}<option value="{{ s.id }}" {% if form.subject == s.id|stringformat:"s" %}selected{% endif %}>{{ s.icon }} {{ s.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="setting-grid">
+        {% for card in setting_fields %}
+          <div class="field">
+            <label for="plan-{{ card.code }}">{{ card.title }}</label>
+            <input type="text" name="{{ card.code }}" id="plan-{{ card.code }}" maxlength="500" value="{{ card.value }}" placeholder="{{ card.question }}">
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# Step 2 — competences #}
+    <div class="section-title">2. {{ t.plan_step_competences }}</div>
+    <p class="template-note">{{ t.plan_competences_hint }}</p>
+    {% for fw in sc.frameworks %}
+      <details class="panel framework-block" {% if forloop.first %}open{% endif %} style="--fw-color: {{ fw.color }};">
+        <summary><span class="fw-dot"></span>{{ fw.icon }} {{ fw.title }} <span class="fw-count" data-fw-count="{{ fw.code }}"></span></summary>
+        <div class="chip-grid competence-grid">
+          {% for c in fw.competences %}
+            <label class="chip" data-choice>
+              <input type="checkbox" name="competences" value="{{ c.code }}" data-fw="{{ fw.code }}" {% if c.code in form.competences %}checked{% endif %}>
+              <span class="chip-code">{{ c.code }}</span> {{ c.title }}
+            </label>
+          {% endfor %}
+        </div>
+      </details>
+    {% endfor %}
+
+    <div class="section-title">{{ t.plan_transversal }}</div>
+    <div class="chip-grid">
+      {% for tv in sc.transversal %}
+        <label class="chip" data-choice>
+          <input type="checkbox" name="transversal" value="{{ tv.code }}" {% if tv.code in form.transversal %}checked{% endif %}>
+          {{ tv.icon }} {{ tv.title }}
+        </label>
+      {% endfor %}
+    </div>
+
+    {# Step 3 — methods #}
+    <div class="section-title">3. {{ t.plan_step_methods }}</div>
+    <div class="type-grid mode-grid">
+      <label class="type-card" data-choice>
+        <input type="radio" name="use_ai" value="1" checked>
+        <span class="icon">✨</span>
+        <div class="label">{{ t.plan_ai_label }}</div>
+        <div class="desc">{{ t.plan_ai_desc }}</div>
+      </label>
+      <label class="type-card" data-choice>
+        <input type="radio" name="use_ai" value="0">
+        <span class="icon">🃏</span>
+        <div class="label">{{ t.plan_manual_label }}</div>
+        <div class="desc">{{ t.plan_manual_desc }}</div>
+      </label>
+    </div>
+
+    <div class="section-title">{{ t.plan_method_label }} <span class="optional-tag" id="method-optional">{{ t.optional }}</span></div>
+    <div class="type-grid">
+      {% for m in sc.methods %}
+        <label class="type-card" data-choice>
+          <input type="radio" name="method" value="{{ m.code }}" {% if form.method == m.code %}checked{% endif %}>
+          <span class="icon method-abbr">{{ m.abbr }}</span>
+          <div class="label">{{ m.title }}</div>
+          <div class="desc">{{ m.description }}</div>
+        </label>
+      {% endfor %}
+    </div>
+
+    <div class="section-title">{{ t.plan_assessment_label }} <span class="optional-tag">{{ t.optional }}</span></div>
+    <div class="chip-grid">
+      {% for a in sc.assessments %}
+        <label class="chip" data-choice>
+          <input type="checkbox" name="assessments" value="{{ a.code }}" {% if a.code in form.assessments %}checked{% endif %}>
+          {{ a.title }}
+        </label>
+      {% endfor %}
+    </div>
+
+    <div class="setup-footer">
+      <button type="submit" class="btn btn-primary">{{ t.plan_submit }}</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    const boxes = Array.from(document.querySelectorAll('input[name="competences"]'));
+    function counts() {
+      document.querySelectorAll('[data-fw-count]').forEach(el => {
+        const n = boxes.filter(b => b.checked && b.dataset.fw === el.dataset.fwCount).length;
+        el.textContent = n ? `· ${n}` : '';
+      });
+    }
+    boxes.forEach(b => b.addEventListener('change', counts));
+    counts();
+
+    const optional = document.getElementById('method-optional');
+    document.querySelectorAll('input[name="use_ai"]').forEach(r => r.addEventListener('change', () => {
+      optional.textContent = r.value === '1' ? "{{ t.optional|escapejs }}" : "{{ t.required|escapejs }}";
+    }));
+
+    document.getElementById('plan-form').addEventListener('submit', (e) => {
+      if (!boxes.some(b => b.checked)) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        alert("{{ t.msg_plan_competences_required|escapejs }}");
+        return;
+      }
+      const manual = document.querySelector('input[name="use_ai"]:checked').value === '0';
+      if (manual && !document.querySelector('input[name="method"]:checked')) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        alert("{{ t.msg_plan_method_required|escapejs }}");
+      }
+    }, true);
+  })();
+</script>
+{% endblock %}

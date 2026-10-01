@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load i18n_extras %}
+{% block title %}{{ t.generate_test_heading }}{% endblock %}
+{% block content %}
+<div class="setup-wrap">
+  <h1>✨ {{ t.generate_test_heading }}</h1>
+  {% if lecture %}
+    <p class="lead">{{ t.generate_from_lecture_lead }} <strong>{{ lecture.title }}</strong> · {{ lecture.subject|localized_subject:LANG }}</p>
+  {% elif lesson %}
+    <p class="lead">{{ t.generate_from_lesson_lead }} <strong>{{ topic }}</strong> · {{ subject_display }}</p>
+  {% else %}
+    <p class="lead">{{ t.generate_from_topic_lead }}</p>
+  {% endif %}
+
+  <form method="post" id="generate-form" data-busy="{{ t.generating_headline }}">
+    {% csrf_token %}
+
+    {% if topic_mode %}
+      <div class="section-title">{{ t.label_subject }}</div>
+      <div class="subject-grid">
+        {% for subject in subjects %}
+          <label class="subject-card" data-choice>
+            <input type="radio" name="subject" value="{{ subject.id }}" required {% if subject.id == selected_subject %}checked{% endif %}>
+            <span class="icon">{{ subject.icon }}</span>
+            <span class="name">{{ subject.name }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      <div class="field" style="margin-top:26px;">
+        <label for="gen-topic">{{ t.label_topic }}</label>
+        <input type="text" name="topic" id="gen-topic" required maxlength="200" value="{{ topic }}" placeholder="{{ t.topic_placeholder }}">
+      </div>
+    {% endif %}
+
+    <div class="field" {% if not topic_mode %}style="margin-top:8px;"{% endif %}>
+      <label for="gen-title">{{ t.label_title }}</label>
+      <input type="text" name="title" id="gen-title" maxlength="120" value="{{ default_title }}" placeholder="{{ t.title_optional_placeholder }}">
+    </div>
+
+    <div class="section-title">{{ t.setup_section_count }}</div>
+    <div class="count-row">
+      <input type="range" id="gen-count-range" min="{{ min_count }}" max="{{ max_count }}" value="10" step="1">
+      <input type="number" name="count" id="gen-count" min="{{ min_count }}" max="{{ max_count }}" value="10" style="width:90px">
+    </div>
+
+    <div class="section-title section-title-row">
+      <span>{{ t.setup_section_types }}</span>
+      <button type="button" class="btn btn-ghost btn-small" data-select-all="interaction_types">{{ t.select_all }}</button>
+    </div>
+    <div class="type-grid">
+      {% for it in interaction_types %}
+        <label class="type-card" data-choice>
+          <input type="checkbox" name="interaction_types" value="{{ it.code }}">
+          <span class="icon">{{ it.icon }}</span>
+          <div class="label">{{ it.label }}</div>
+        </label>
+      {% endfor %}
+    </div>
+
+    <div class="field" style="margin-top:26px;">
+      <label for="gen-difficulty">{{ t.label_difficulty_optional }}</label>
+      <select name="difficulty" id="gen-difficulty">
+        <option value="">—</option>
+        {% for code, label in difficulties %}<option value="{{ code }}">{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+
+    <p class="template-note">{{ t.generate_note }}</p>
+    <div class="setup-footer">
+      <button type="submit" class="btn btn-primary">{{ t.generate_submit }}</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    const range = document.getElementById('gen-count-range');
+    const number = document.getElementById('gen-count');
+    range.addEventListener('input', () => { number.value = range.value; });
+    number.addEventListener('input', () => { range.value = number.value; });
+    document.getElementById('generate-form').addEventListener('submit', (e) => {
+      if (document.querySelectorAll('input[name="interaction_types"]:checked').length < 2) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        alert("{{ t.msg_min_types|escapejs }}");
+      }
+    }, true);
+  })();
+</script>
+{% endblock %}

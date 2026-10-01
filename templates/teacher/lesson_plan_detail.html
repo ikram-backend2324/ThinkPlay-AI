@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load i18n_extras %}
+{% block title %}{{ lesson.topic }}{% endblock %}
+{% block content %}
+<div class="setup-wrap plan-doc">
+  <div class="tab-row no-print">
+    <a href="{% url 'teacher_lesson_plans' %}" class="btn btn-ghost">← {{ t.lesson_plans_heading }}</a>
+    <button type="button" class="btn btn-ghost" onclick="window.print()">🖨️ {{ t.print_btn }}</button>
+    <a href="{% url 'teacher_lesson_plan_test' lesson.id %}" class="btn btn-primary">✨ {{ t.plan_make_test_btn }}</a>
+  </div>
+
+  <p class="eyebrow">{% if lesson.ai_generated %}✨ {{ t.plan_ai_badge }}{% else %}🃏 {{ t.plan_manual_badge }}{% endif %} · {{ lesson.created_at|date:"d.m.Y" }}</p>
+  <h1>{{ lesson.topic }}</h1>
+  {% if lesson.subject %}<p class="lead">{{ lesson.subject.icon }} {{ lesson.subject|localized_subject:LANG }}</p>{% endif %}
+
+  {% if settings_rows %}
+    <div class="plan-settings">
+      {% for row in settings_rows %}
+        <div class="panel plan-setting"><span class="plan-setting-title">{{ row.title }}</span>{{ row.value }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="section-title">{{ t.plan_competences_heading }}</div>
+  <div class="badge-list">
+    {% for c in competences %}<span class="badge-pill"><b>{{ c.code }}</b> {{ c.title }}</span>{% endfor %}
+    {% for tv in transversal %}<span class="badge-pill badge-pill-alt">{{ tv }}</span>{% endfor %}
+  </div>
+
+  {% if plan.learning_outcomes %}
+    <div class="section-title">{{ t.plan_outcomes_heading }}</div>
+    <ul class="plan-list">{% for o in plan.learning_outcomes %}<li>{{ o }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  {% if method %}
+    <div class="section-title">{{ t.plan_method_heading }}</div>
+    <div class="panel plan-card">
+      <h3><span class="method-abbr">{{ method.abbr }}</span> {{ method.title }}</h3>
+      <p class="plan-dim">{{ method.description }}</p>
+      {% if method.why %}<p><b>{{ t.plan_why }}</b> {{ method.why }}</p>{% endif %}
+      {% if steps %}
+        <ol class="plan-list">{% for s in steps %}<li>{{ s }}</li>{% endfor %}</ol>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if diagnostic %}
+    <div class="section-title">{{ t.plan_diagnostic_heading }}</div>
+    <div class="panel plan-card">
+      <h3>{{ diagnostic.title }}</h3>
+      {% if diagnostic.how %}<p>{{ diagnostic.how }}</p>{% endif %}
+    </div>
+  {% endif %}
+
+  {% if plan.output %}
+    <div class="section-title">{{ t.plan_output_heading }}</div>
+    <div class="panel plan-card"><p>{{ plan.output }}</p></div>
+  {% endif %}
+
+  {% if final %}
+    <div class="section-title">{{ t.plan_final_heading }}</div>
+    {% for a in final %}
+      <div class="panel plan-card">
+        <h3>{{ a.title }}</h3>
+        {% if a.how %}<p>{{ a.how }}</p>{% endif %}
+        <ul class="plan-list plan-dim">{% for h in a.hints %}<li>{{ h }}</li>{% endfor %}</ul>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {% if plan.resources %}
+    <div class="section-title">{{ t.plan_resources_heading }}</div>
+    <ul class="plan-list">{% for r in plan.resources %}<li>{{ r }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  {% if plan.timeline %}
+    <div class="section-title">{{ t.plan_timeline_heading }}{% if total_minutes %} · {{ total_minutes }} {{ t.minutes_short }}{% endif %}</div>
+    <div class="timeline">
+      {% for row in plan.timeline %}
+        <div class="timeline-row"><span class="timeline-min">{{ row.minutes }} {{ t.minutes_short }}</span><span>{{ row.activity }}</span></div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if principles %}
+    <div class="section-title">{{ t.plan_principles_heading }}</div>
+    <ul class="plan-list">{% for p in principles %}<li>{{ p }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  <p class="template-note">{{ t.scaffold_attribution }}</p>
+
+  <form method="post" action="{% url 'teacher_lesson_plan_delete' lesson.id %}" class="no-print" style="margin-top:28px;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-ghost" onclick="return confirm('{{ t.plan_delete_confirm|escapejs }}')">{{ t.delete_btn }}</button>
+  </form>
+</div>
+{% endblock %}

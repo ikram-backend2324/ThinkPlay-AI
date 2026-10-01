@@ -1,9 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Test Results — Smart Test Platform{% endblock %}
+{% load i18n_extras %}
+{% block title %}{{ t.test_results_heading }}{% endblock %}
 {% block content %}
 <div class="history-wrap">
   <h1>{{ t.test_results_heading }}</h1>
-  <p class="lead">{{ teacher_test.title }} · {{ teacher_test.subject.name }}</p>
+  <p class="lead">{{ teacher_test.title }} · {{ teacher_test.subject|localized_subject:LANG }}</p>
 
   {% if assignments %}
     {% for a in assignments %}
@@ -11,7 +12,11 @@
         <span class="icon">🎓</span>
         <span class="meta">
           <div class="subj">{{ a.student.username }}</div>
-          <div class="date">{{ a.test_session.get_status_display }}</div>
+          <div class="date">
+            {% if a.test_session.status == "completed" %}{{ t.status_completed }} · ⭐ {{ a.test_session.points }} · ⚡ {{ a.test_session.speed_bonus }}
+            {% elif a.test_session.status == "ready" %}{{ t.status_not_started }}
+            {% else %}{{ t.status_abandoned }}{% endif %}
+          </div>
         </span>
         <span class="history-score">
           {% if a.test_session.status == "completed" %}{{ a.test_session.percentage }}%{% else %}—{% endif %}

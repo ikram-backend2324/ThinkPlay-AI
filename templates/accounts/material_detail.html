@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% load i18n_extras %}
+{% block title %}{{ lecture.title }}{% endblock %}
+{% block content %}
+<div class="history-wrap">
+  <a href="{% url 'materials' %}" class="btn btn-ghost" style="margin-bottom:16px;">← {{ t.materials_heading }}</a>
+  <article class="panel lecture-body">
+    <div class="question-type-tag">{{ lecture.subject.icon }} {{ lecture.subject|localized_subject:LANG }}</div>
+    <h1>{{ lecture.title }}</h1>
+    {% for p in paragraphs %}<p>{{ p }}</p>{% endfor %}
+  </article>
+</div>
+{% endblock %}

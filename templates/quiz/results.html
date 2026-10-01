@@ -1,9 +1,6 @@
 {% extends "base.html" %}
 {% load static i18n_extras %}
-{% block title %}Results — Smart Test Platform{% endblock %}
-{% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-{% endblock %}
+{% block title %}{{ t.results_title }}{% endblock %}
 {% block content %}
 <div class="results-wrap">
   <div class="panel results-card">
@@ -22,8 +19,19 @@
     </div>
     <h2>{{ session.subject.icon }} {{ session.subject|localized_subject:LANG }}</h2>
     <p class="results-sub">{{ t.results_scored_prefix }} <strong>{{ session.score }}</strong> {{ t.results_scored_infix }} <strong>{{ session.total_questions }}</strong></p>
+    <div class="points-row">
+      <div class="points-chip"><span class="points-num">⭐ {{ session.points }}</span><span class="points-label">{{ t.points_label }}</span></div>
+      <div class="points-chip"><span class="points-num">⚡ {{ session.speed_bonus }}</span><span class="points-label">{{ t.speed_bonus_label }}</span></div>
+    </div>
+    {% if badges %}
+      <div class="section-title" style="margin-top:18px;">{{ t.badges_new_heading }}</div>
+      <div class="badge-list">
+        {% for b in badges %}<span class="badge-pill">{{ b.emoji }} {{ b.label }}</span>{% endfor %}
+      </div>
+    {% endif %}
     <div class="results-actions">
       <a href="{% url 'quiz_review' session.id %}" class="btn btn-ghost">{{ t.results_review_btn }}</a>
+      <a href="{% url 'leaderboard' %}" class="btn btn-ghost">🏆 {{ t.nav_leaderboard }}</a>
       <a href="{% url 'quiz_setup' %}" class="btn btn-primary">{{ t.results_another_btn }}</a>
     </div>
   </div>
@@ -31,6 +39,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script>
   const pct = {{ session.percentage }};
   const circle = document.getElementById('score-circle');
@@ -55,7 +64,7 @@
   }
   requestAnimationFrame(tick);
 
-  if (pct >= 70 && window.confetti) {
+  if ((pct >= 70 || {{ badges|length }} > 0) && window.confetti) {
     setTimeout(() => {
       confetti({ particleCount: 140, spread: 90, origin: { y: 0.6 }, colors: ['#7c3aed', '#22d3ee', '#ec4899'] });
     }, 400);

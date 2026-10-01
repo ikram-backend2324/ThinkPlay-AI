@@ -3,7 +3,8 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 
 from core.models import (
-    Answer, Assignment, Profile, Question, Subject, TeacherQuestion, TeacherTest, TestSession,
+    Answer, Assignment, Badge, Lecture, LessonPlan, Profile, Question, Subject, TeacherQuestion, TeacherTest,
+    TestSession,
 )
 
 
@@ -52,7 +53,7 @@ class QuestionInline(admin.TabularInline):
 
 @admin.register(TestSession)
 class TestSessionAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "subject", "source", "status", "score", "total_questions", "created_at")
+    list_display = ("id", "user", "subject", "source", "status", "score", "total_questions", "points", "created_at")
     list_filter = ("status", "source", "subject", "difficulty")
     search_fields = ("user__username",)
     inlines = [QuestionInline]
@@ -94,3 +95,24 @@ class TeacherQuestionAdmin(admin.ModelAdmin):
 class AssignmentAdmin(admin.ModelAdmin):
     list_display = ("id", "teacher_test", "student", "assigned_at")
     search_fields = ("student__username",)
+
+
+@admin.register(Badge)
+class BadgeAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "code", "subject", "teacher_test", "awarded_at")
+    list_filter = ("code", "subject")
+    search_fields = ("user__username",)
+
+
+@admin.register(Lecture)
+class LectureAdmin(admin.ModelAdmin):
+    list_display = ("id", "title", "teacher", "subject", "created_at")
+    list_filter = ("subject",)
+    search_fields = ("title", "teacher__username")
+
+
+@admin.register(LessonPlan)
+class LessonPlanAdmin(admin.ModelAdmin):
+    list_display = ("id", "topic", "teacher", "subject", "ai_generated", "created_at")
+    list_filter = ("ai_generated", "subject")
+    search_fields = ("topic", "teacher__username")

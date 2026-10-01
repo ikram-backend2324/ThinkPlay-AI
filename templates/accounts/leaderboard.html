@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ t.leaderboard_heading }}{% endblock %}
+{% block content %}
+<div class="history-wrap">
+  <h1>🏆 {{ t.leaderboard_heading }}</h1>
+  <p class="lead">{{ t.leaderboard_lead }}</p>
+
+  <div class="tab-row">
+    <a href="?period=all" class="btn {% if period != 'week' %}btn-primary{% else %}btn-ghost{% endif %}">{{ t.leaderboard_all_time }}</a>
+    <a href="?period=week" class="btn {% if period == 'week' %}btn-primary{% else %}btn-ghost{% endif %}">{{ t.leaderboard_week }}</a>
+  </div>
+
+  {% if rows %}
+    {% for row in rows %}
+      <div class="panel history-row leaderboard-row {% if row.user == user %}is-me{% endif %}">
+        <span class="rank rank-{{ row.rank }}">
+          {% if row.rank == 1 %}🥇{% elif row.rank == 2 %}🥈{% elif row.rank == 3 %}🥉{% else %}{{ row.rank }}{% endif %}
+        </span>
+        <span class="meta">
+          <div class="subj">{{ row.user.username }}{% if row.user == user %} · {{ t.leaderboard_you }}{% endif %}</div>
+          <div class="date">{{ row.tests }} {{ t.leaderboard_tests_suffix }} · 🏅 {{ row.badges }}</div>
+        </span>
+        <span class="history-score">⭐ {{ row.points }}</span>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="panel empty-state"><p>{{ t.leaderboard_empty }}</p></div>
+  {% endif %}
+
+  <div class="panel how-points">
+    <strong>{{ t.points_how_heading }}</strong>
+    <p>{{ t.points_how_body }}</p>
+  </div>
+</div>
+{% endblock %}

@@ -1,10 +1,25 @@
 {% extends "base.html" %}
 {% load i18n_extras %}
-{% block title %}History — Smart Test Platform{% endblock %}
+{% block title %}{{ t.history_heading }}{% endblock %}
 {% block content %}
 <div class="history-wrap">
   <h1>{{ t.history_heading }}</h1>
   {% if sessions %}
+    <div class="points-row" style="justify-content:flex-start;">
+      <div class="points-chip"><span class="points-num">⭐ {{ total_points }}</span><span class="points-label">{{ t.points_total_label }}</span></div>
+      <div class="points-chip"><span class="points-num">🏅 {{ badges|length }}</span><span class="points-label">{{ t.badges_heading }}</span></div>
+      <a class="btn btn-ghost" href="{% url 'leaderboard' %}">🏆 {{ t.nav_leaderboard }}</a>
+    </div>
+
+    <div class="section-title">{{ t.badges_heading }}</div>
+    {% if badges %}
+      <div class="badge-list">
+        {% for b in badges %}<span class="badge-pill">{{ b.emoji }} {{ b.label }}</span>{% endfor %}
+      </div>
+    {% else %}
+      <p class="lead">{{ t.badges_empty }}</p>
+    {% endif %}
+
     <div class="section-title">{{ t.history_by_subject }}</div>
     <div class="subject-stats-grid">
       {% for row in subject_stats %}
@@ -25,7 +40,7 @@
           <div class="subj">{{ s.subject|localized_subject:LANG }} · {{ s.total_questions }} {{ t.history_questions_suffix }}</div>
           <div class="date">{{ s.completed_at|date:"M d, Y H:i" }}</div>
         </span>
-        <span class="history-score">{{ s.percentage }}%</span>
+        <span class="history-score">{{ s.percentage }}%<small class="history-points">⭐ {{ s.points }}</small></span>
       </a>
     {% endfor %}
   {% else %}

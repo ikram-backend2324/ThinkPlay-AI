@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}{{ t.guide_heading }}{% endblock %}
+{% block content %}
+<div class="setup-wrap guide">
+  <p class="eyebrow">SCAFFOLD · JRC &amp; ETF</p>
+  <h1>📘 {{ t.guide_heading }}</h1>
+  <p class="lead">{{ t.guide_lead }}</p>
+
+  <nav class="guide-toc">
+    <a href="#steps">{{ t.guide_steps }}</a>
+    <a href="#principles">{{ t.guide_principles }}</a>
+    <a href="#methods">{{ t.guide_methods }}</a>
+    <a href="#assessments">{{ t.guide_assessments }}</a>
+    <a href="#competences">{{ t.guide_competences }}</a>
+  </nav>
+
+  {% if user.is_authenticated and user.profile.role != "student" %}
+    <a href="{% url 'teacher_lesson_plan_new' %}" class="panel guide-cta">
+      <span class="icon">🧭</span>
+      <span><b>{{ t.action_design_lesson }}</b><br><span class="plan-dim">{{ t.action_design_lesson_desc }}</span></span>
+    </a>
+  {% endif %}
+
+  <h2 id="steps" class="guide-h2">{{ t.guide_steps }}</h2>
+  <ol class="guide-steps">
+    {% for step in sc.steps %}<li>{{ step }}</li>{% endfor %}
+  </ol>
+
+  <div class="section-title">{{ t.guide_setting_cards }}</div>
+  <div class="guide-grid">
+    {% for card in sc.setting_cards %}
+      <div class="panel guide-card"><h3>{{ card.title }}</h3><p>{{ card.question }}</p></div>
+    {% endfor %}
+  </div>
+
+  <h2 id="principles" class="guide-h2">{{ t.guide_principles }}</h2>
+  {% for p in sc.principles %}
+    <details class="panel guide-details">
+      <summary><span class="guide-num">{{ forloop.counter }}</span>{{ p.title }}</summary>
+      <ul class="plan-list">{% for tip in p.tips %}<li>{{ tip }}</li>{% endfor %}</ul>
+      <p class="guide-try">💡 {{ t.guide_try }} <b>{{ p.try_method_title }}</b> + {{ p.try_assessment_titles|join:", " }}</p>
+    </details>
+  {% endfor %}
+
+  <h2 id="methods" class="guide-h2">{{ t.guide_methods }}</h2>
+  {% for m in sc.methods %}
+    <details class="panel guide-details">
+      <summary><span class="method-abbr">{{ m.abbr }}</span>{{ m.title }}</summary>
+      <p>{{ m.description }}</p>
+      <p class="guide-label">{{ t.guide_how }}</p>
+      <ol class="plan-list">{% for s in m.steps %}<li>{{ s }}</li>{% endfor %}</ol>
+      <p class="guide-label">{{ t.guide_ideas }}</p>
+      <ul class="plan-list">{% for idea in m.ideas %}<li>{{ idea }}</li>{% endfor %}</ul>
+    </details>
+  {% endfor %}
+
+  <h2 id="assessments" class="guide-h2">{{ t.guide_assessments }}</h2>
+  {% for a in sc.assessments %}
+    <details class="panel guide-details">
+      <summary>{{ a.title }}</summary>
+      <p>{{ a.description }}</p>
+      <ul class="plan-list">{% for h in a.hints %}<li>{{ h }}</li>{% endfor %}</ul>
+      {% if a.platform_note %}<p class="guide-try">✅ {{ a.platform_note }}</p>{% endif %}
+    </details>
+  {% endfor %}
+
+  <h2 id="competences" class="guide-h2">{{ t.guide_competences }}</h2>
+  {% for fw in sc.frameworks %}
+    <details class="panel framework-block" style="--fw-color: {{ fw.color }};">
+      <summary><span class="fw-dot"></span>{{ fw.icon }} {{ fw.title }} · {{ fw.competences|length }}</summary>
+      <div class="chip-grid">
+        {% for c in fw.competences %}<span class="chip chip-static"><span class="chip-code">{{ c.code }}</span> {{ c.title }}</span>{% endfor %}
+      </div>
+    </details>
+  {% endfor %}
+  <div class="section-title">{{ t.plan_transversal }}</div>
+  <div class="chip-grid">
+    {% for tv in sc.transversal %}<span class="chip chip-static">{{ tv.icon }} {{ tv.title }}</span>{% endfor %}
+  </div>
+
+  <p class="template-note guide-source">
+    {{ t.guide_source }} <a href="{{ source_url }}" target="_blank" rel="noopener">{{ source_title }}</a>.
+    {{ t.guide_license }} <a href="{{ license_url }}" target="_blank" rel="noopener">CC BY 4.0</a>.
+  </p>
+</div>
+{% endblock %}

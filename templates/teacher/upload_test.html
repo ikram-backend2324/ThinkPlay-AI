@@ -1,16 +1,18 @@
 {% extends "base.html" %}
-{% block title %}Upload Test — Smart Test Platform{% endblock %}
+{% load static %}
+{% block title %}{{ t.upload_test_heading }}{% endblock %}
 {% block content %}
 <div class="setup-wrap">
   <h1>{{ t.upload_test_heading }}</h1>
+  <p class="lead">{{ t.upload_lead }}</p>
 
-  <form method="post" enctype="multipart/form-data" id="upload-form">
+  <form method="post" enctype="multipart/form-data" id="upload-form" data-busy="{{ t.working }}">
     {% csrf_token %}
 
     <div class="section-title">{{ t.label_subject }}</div>
     <div class="subject-grid">
       {% for subject in subjects %}
-        <label class="subject-card" data-subject-card>
+        <label class="subject-card" data-choice>
           <input type="radio" name="subject" value="{{ subject.id }}" required>
           <span class="icon">{{ subject.icon }}</span>
           <span class="name">{{ subject.name }}</span>
@@ -19,13 +21,13 @@
     </div>
 
     <div class="field" style="margin-top:26px;">
-      <label>{{ t.label_title }}</label>
-      <input type="text" name="title" required>
+      <label for="upload-title">{{ t.label_title }}</label>
+      <input type="text" name="title" id="upload-title" required maxlength="120">
     </div>
 
     <div class="field">
-      <label>{{ t.label_difficulty_optional }}</label>
-      <select name="difficulty" class="select-input">
+      <label for="upload-difficulty">{{ t.label_difficulty_optional }}</label>
+      <select name="difficulty" id="upload-difficulty" class="select-input">
         <option value="">—</option>
         {% for code, label in difficulties %}
           <option value="{{ code }}">{{ label }}</option>
@@ -35,43 +37,123 @@
 
     <div class="field">
       <label>{{ t.label_file }}</label>
-      <input type="file" name="file" accept=".docx,.pdf" required>
+      <label class="file-picker">
+        <input type="file" name="file" accept=".docx,.pdf" required id="upload-file">
+        <span class="btn btn-ghost">📎 {{ t.choose_file }}</span>
+        <span class="file-name" id="upload-file-name">{{ t.no_file_chosen }}</span>
+      </label>
     </div>
 
     <div class="section-title">{{ t.label_parse_mode }}</div>
-    <div class="type-grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr));">
-      <label class="type-card" data-mode-card>
+    <div class="type-grid mode-grid">
+      <label class="type-card" data-choice>
         <input type="radio" name="mode" value="template" required>
+        <span class="icon">📐</span>
         <div class="label">{{ t.mode_template_label }}</div>
+        <div class="desc">{{ t.mode_template_desc }}</div>
       </label>
-      <label class="type-card" data-mode-card>
+      <label class="type-card" data-choice>
         <input type="radio" name="mode" value="ai" required>
+        <span class="icon">✨</span>
         <div class="label">{{ t.mode_ai_label }}</div>
+        <div class="desc">{{ t.mode_ai_desc }}</div>
       </label>
     </div>
 
-    <div class="panel" style="padding:18px; margin-top:16px;">
-      <p>{{ t.template_format_intro }}</p>
-      <pre class="code-block" style="border-radius:12px;">Q: What is the capital of France?
-A) London
-B) Paris
-C) Berlin
-D) Madrid
-Correct: B
-Explanation: Paris is the capital of France.</pre>
-    </div>
-
-    <div id="ai-types-section" style="display:none;">
-      <div class="section-title">{{ t.setup_section_types }}</div>
+    <div id="ai-types-section" hidden>
+      <div class="section-title section-title-row">
+        <span>{{ t.setup_section_types }}</span>
+        <button type="button" class="btn btn-ghost btn-small" data-select-all="interaction_types">{{ t.select_all }}</button>
+      </div>
       <div class="type-grid">
         {% for it in interaction_types %}
-          <label class="type-card" data-type-card>
+          <label class="type-card" data-choice>
             <input type="checkbox" name="interaction_types" value="{{ it.code }}">
             <span class="icon">{{ it.icon }}</span>
             <div class="label">{{ it.label }}</div>
           </label>
         {% endfor %}
       </div>
+    </div>
+
+    <div class="panel template-help" id="template-help">
+      <h3>📐 {{ t.template_help_heading }}</h3>
+      <p>{{ t.template_help_intro }}</p>
+      <p class="template-downloads">
+        {{ t.template_download_label }}
+        <a class="btn btn-ghost btn-small" href="{% static 'samples/teachx_template_uz.docx' %}" download>Oʻzbekcha</a>
+        <a class="btn btn-ghost btn-small" href="{% static 'samples/teachx_template_ru.docx' %}" download>Русский</a>
+        <a class="btn btn-ghost btn-small" href="{% static 'samples/teachx_template_en.docx' %}" download>English</a>
+      </p>
+
+      <details open>
+        <summary>🧩 {{ t.type_label_multi_select }}</summary>
+        <pre class="code-block">Q: Oʻzbekiston poytaxti qaysi shahar?
+A) Samarqand
+B) Toshkent
+C) Buxoro
+Correct: B
+Explanation: Toshkent — poytaxt.</pre>
+        <p class="template-note">{{ t.template_note_choice }}</p>
+      </details>
+      <details>
+        <summary>✏️ {{ t.type_label_fill_blank }}</summary>
+        <pre class="code-block">Q: Suv ___ °C da qaynaydi.
+Type: fill_blank
+Answer: 100 | yuz</pre>
+      </details>
+      <details>
+        <summary>🔗 {{ t.type_label_matching }}</summary>
+        <pre class="code-block">Q: Davlatni poytaxti bilan moslang.
+Type: matching
+Fransiya = Parij
+Yaponiya = Tokio
+Misr = Qohira</pre>
+      </details>
+      <details>
+        <summary>🔢 {{ t.type_label_ordering }}</summary>
+        <pre class="code-block">Q: Sayyoralarni Quyoshdan boshlab tartiblang.
+Type: ordering
+1) Merkuriy
+2) Venera
+3) Yer
+4) Mars</pre>
+        <p class="template-note">{{ t.template_note_ordering }}</p>
+      </details>
+      <details>
+        <summary>🎚️ {{ t.type_label_numeric }}</summary>
+        <pre class="code-block">Q: Toʻgʻri burchak necha gradus?
+Type: numeric
+Answer: 90
+Tolerance: 0
+Unit: °
+Min: 0
+Max: 180</pre>
+      </details>
+      <details>
+        <summary>🗂️ {{ t.type_label_categorize }}</summary>
+        <pre class="code-block">Q: Hayvonlarni guruhlang.
+Type: categorize
+Sutemizuvchilar: It; Kit; Ot
+Qushlar: Burgut; Pingvin</pre>
+      </details>
+      <details>
+        <summary>🖱️ {{ t.type_label_hotspot_text }}</summary>
+        <pre class="code-block">Q: Barcha feʼllarni belgilang.
+Type: hotspot
+Text: Bola maktabga [bordi] va kitob [oʻqidi].</pre>
+      </details>
+      <details>
+        <summary>💻 {{ t.type_label_code_complete }}</summary>
+        <pre class="code-block">Q: Siklni toʻldiring.
+Type: code
+Language: python
+Code:
+for i in ___(5):
+    print(i)
+Answer: range</pre>
+      </details>
+      <p class="template-note">{{ t.template_note_keywords }}</p>
     </div>
 
     <div class="setup-footer">
@@ -83,24 +165,28 @@ Explanation: Paris is the capital of France.</pre>
 
 {% block extra_scripts %}
 <script>
-  document.querySelectorAll('[data-subject-card]').forEach(card => {
-    const input = card.querySelector('input');
-    input.addEventListener('change', () => {
-      document.querySelectorAll('[data-subject-card]').forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
+  (function () {
+    const aiSection = document.getElementById('ai-types-section');
+    const help = document.getElementById('template-help');
+    document.querySelectorAll('input[name="mode"]').forEach(input => {
+      input.addEventListener('change', () => {
+        aiSection.hidden = input.value !== 'ai';
+        help.hidden = input.value === 'ai';
+      });
     });
-  });
-  document.querySelectorAll('[data-mode-card]').forEach(card => {
-    const input = card.querySelector('input');
-    input.addEventListener('change', () => {
-      document.querySelectorAll('[data-mode-card]').forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-      document.getElementById('ai-types-section').style.display = input.value === 'ai' ? 'block' : 'none';
+    const file = document.getElementById('upload-file');
+    const fileName = document.getElementById('upload-file-name');
+    file.addEventListener('change', () => {
+      fileName.textContent = file.files.length ? file.files[0].name : "{{ t.no_file_chosen|escapejs }}";
     });
-  });
-  document.querySelectorAll('[data-type-card]').forEach(card => {
-    const input = card.querySelector('input');
-    input.addEventListener('change', () => card.classList.toggle('selected', input.checked));
-  });
+    document.getElementById('upload-form').addEventListener('submit', (e) => {
+      const mode = document.querySelector('input[name="mode"]:checked');
+      if (mode && mode.value === 'ai' && document.querySelectorAll('input[name="interaction_types"]:checked').length < 2) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        alert("{{ t.msg_upload_ai_min_types|escapejs }}");
+      }
+    }, true);
+  })();
 </script>
 {% endblock %}

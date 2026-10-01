@@ -1,14 +1,20 @@
 {% extends "base.html" %}
-{% block title %}Assign Test — Smart Test Platform{% endblock %}
+{% load i18n_extras %}
+{% block title %}{{ t.assign_test_heading }}{% endblock %}
 {% block content %}
 <div class="setup-wrap">
   <h1>{{ t.assign_test_heading }}</h1>
-  <p class="lead">{{ teacher_test.title }} · {{ teacher_test.subject.name }}</p>
+  <p class="lead">{{ teacher_test.title }} · {{ teacher_test.subject|localized_subject:LANG }}</p>
 
   {% if students %}
     <div class="section-title">{{ t.assign_select_students }}</div>
     <form method="post">
       {% csrf_token %}
+      <label class="select-all">
+        <input type="checkbox" id="select-all">
+        <span>{{ t.assign_select_all }}</span>
+        <span class="select-count" id="select-count"></span>
+      </label>
       <div class="type-grid">
         {% for profile in students %}
           <label class="type-card" data-type-card>
@@ -21,7 +27,7 @@
         {% endfor %}
       </div>
       <div class="setup-footer">
-        <button type="submit" class="btn btn-primary">{{ t.assign_submit }}</button>
+        <button type="submit" class="btn btn-primary" id="assign-submit">{{ t.assign_submit }}</button>
       </div>
     </form>
   {% else %}
@@ -32,9 +38,28 @@
 
 {% block extra_scripts %}
 <script>
-  document.querySelectorAll('[data-type-card]').forEach(card => {
-    const input = card.querySelector('input');
-    input.addEventListener('change', () => card.classList.toggle('selected', input.checked));
-  });
+  (function () {
+    const boxes = Array.from(document.querySelectorAll('input[name="students"]'));
+    const selectAll = document.getElementById('select-all');
+    const count = document.getElementById('select-count');
+    const submit = document.getElementById('assign-submit');
+    if (!selectAll) return;
+
+    function sync() {
+      const checked = boxes.filter(b => b.checked).length;
+      boxes.forEach(b => b.closest('[data-type-card]').classList.toggle('selected', b.checked));
+      selectAll.checked = checked === boxes.length && boxes.length > 0;
+      selectAll.indeterminate = checked > 0 && checked < boxes.length;
+      count.textContent = `${checked} / ${boxes.length}`;
+      submit.disabled = checked === 0;
+    }
+
+    selectAll.addEventListener('change', () => {
+      boxes.forEach(b => { b.checked = selectAll.checked; });
+      sync();
+    });
+    boxes.forEach(b => b.addEventListener('change', sync));
+    sync();
+  })();
 </script>
 {% endblock %}

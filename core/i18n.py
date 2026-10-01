@@ -758,8 +758,20 @@ TRANSLATIONS = {
 }
 
 
+from core.i18n_teachx import STRINGS as _TEACHX_STRINGS  # noqa: E402
+
+for _code, _strings in _TEACHX_STRINGS.items():
+    TRANSLATIONS.setdefault(_code, {}).update(_strings)
+
+# Every language falls back to English for a key it doesn't define yet, so a
+# missing translation shows English text instead of an empty string.
+_RESOLVED = {
+    code: {**TRANSLATIONS[DEFAULT_LANGUAGE], **strings} for code, strings in TRANSLATIONS.items()
+}
+
+
 def get_strings(lang_code):
-    return TRANSLATIONS.get(lang_code, TRANSLATIONS[DEFAULT_LANGUAGE])
+    return _RESOLVED.get(lang_code, _RESOLVED[DEFAULT_LANGUAGE])
 
 
 SUBJECT_NAMES = {

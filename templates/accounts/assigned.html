@@ -1,10 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Assigned Tests — Smart Test Platform{% endblock %}
+{% block title %}{{ t.assigned_heading }}{% endblock %}
 {% block content %}
 <div class="history-wrap">
   <h1>{{ t.assigned_heading }}</h1>
 
   {% if rows %}
+    <p class="lead">{{ t.assigned_offline_note }}</p>
     {% for row in rows %}
       <a class="panel history-row" href="{% url 'quiz_take' row.session.id %}">
         <span class="icon">{{ row.session.subject.icon }}</span>
@@ -19,4 +20,13 @@
     <div class="panel empty-state"><p>{{ t.assigned_empty }}</p></div>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Cache every assigned test so it can be opened and solved without internet.
+  if (window.TEACHX && TEACHX.prefetch) {
+    TEACHX.prefetch([{% for row in rows %}"{% url 'quiz_take' row.session.id %}",{% endfor %}]);
+  }
+</script>
 {% endblock %}

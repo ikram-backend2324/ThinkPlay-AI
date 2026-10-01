@@ -38,7 +38,18 @@ class Profile(models.Model):
         return f"{self.user} ({self.role})"
 
 
+class SubjectQuerySet(models.QuerySet):
+    def from_form(self, value):
+        """The subject a submitted form field points at, or None for a missing/garbage value."""
+        try:
+            return self.filter(id=int(value)).first()
+        except (TypeError, ValueError):
+            return None
+
+
 class Subject(models.Model):
+    objects = SubjectQuerySet.as_manager()
+
     name = models.CharField(max_length=60, unique=True)
     slug = models.SlugField(max_length=60, unique=True)
     icon = models.CharField(max_length=8, default="📘")
@@ -55,9 +66,13 @@ class Subject(models.Model):
 class TeacherTest(models.Model):
     SOURCE_AI_PARSED = "ai_parsed"
     SOURCE_TEMPLATE_PARSED = "template_parsed"
+    SOURCE_AI_LECTURE = "ai_lecture"
+    SOURCE_AI_TOPIC = "ai_topic"
     SOURCE_CHOICES = [
         (SOURCE_AI_PARSED, "AI-parsed"),
         (SOURCE_TEMPLATE_PARSED, "Template-parsed"),
+        (SOURCE_AI_LECTURE, "AI-generated from a lecture"),
+        (SOURCE_AI_TOPIC, "AI-generated from a topic"),
     ]
 
     teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="authored_tests")
@@ -127,11 +142,17 @@ class TestSession(models.Model):
     )
     score = models.PositiveSmallIntegerField(default=0)
     total_questions = models.PositiveSmallIntegerField(default=0)
+    # Gamification: every correct answer is worth a base amount plus a bonus
+    # for answering quickly (see core.gamification). `points` includes the
+    # bonus; `speed_bonus` is kept separately so it can be shown on its own.
+    points = models.PositiveIntegerField(default=0)
+    speed_bonus = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [models.Index(fields=["user", "status"])]
 
     def __str__(self):
         return f"{self.user} · {self.subject} · {self.requested_count}q"
@@ -181,7 +202,65 @@ class Answer(models.Model):
     question = models.OneToOneField(Question, on_delete=models.CASCADE, related_name="answer")
     submitted_data = models.JSONField(default=dict)
     is_correct = models.BooleanField(default=False)
+    # Seconds the learner spent on this question, as measured in the browser.
+    time_spent = models.FloatField(default=0)
     answered_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Answer to {self.question_id} ({'correct' if self.is_correct else 'incorrect'})"
+
+
+class Badge(models.Model):
+    """An achievement a student earned. Which badges exist and when they are
+    awarded is defined in core.gamification."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="badges")
+    code = models.CharField(max_length=30)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, null=True, blank=True)
+    teacher_test = models.ForeignKey(TeacherTest, on_delete=models.CASCADE, null=True, blank=True)
+    session = models.ForeignKey(TestSession, on_delete=models.SET_NULL, null=True, blank=True, related_name="badges")
+    awarded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-awarded_at"]
+
+    def __str__(self):
+        return f"{self.user} · {self.code}"
+
+
+class Lecture(models.Model):
+    """Teaching material a teacher keeps on the platform. Their students can
+    read it, and the teacher can generate a test from it."""
+
+    teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="lectures")
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="lectures")
+    title = models.CharField(max_length=160)
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.title
+
+
+class LessonPlan(models.Model):
+    """A lesson designed with the SCAFFOLD assistant. `setting` holds the
+    teacher's inputs (topic, duration, competences, ...) and `plan` the
+    generated or hand-picked design (methods, assessment, timeline, ...)."""
+
+    teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="lesson_plans")
+    subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True)
+    topic = models.CharField(max_length=200)
+    language = models.CharField(max_length=8, default="en")
+    setting = models.JSONField(default=dict)
+    plan = models.JSONField(default=dict)
+    ai_generated = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.topic

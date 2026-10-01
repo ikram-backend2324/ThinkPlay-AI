@@ -1,8 +1,52 @@
 (function () {
   const questions = JSON.parse(document.getElementById("questions-data").textContent);
+  const CONFIG = window.QUIZ_CONFIG || {};
+  const DRAFT_KEY = `teachx-quiz-${CONFIG.sessionId}`;
   let current = 0;
-  const answers = {}; // question id -> submitted answer object
+  let answers = {}; // question id -> submitted answer object
+  let times = {}; // question id -> seconds spent (summed over every visit)
   const getters = new Array(questions.length).fill(null);
+
+  // Restore a draft saved earlier (page reload, lost connection, closed tab).
+  try {
+    const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+    if (draft && draft.answers) {
+      answers = draft.answers;
+      times = draft.times || {};
+      current = Math.min(Math.max(0, draft.current || 0), questions.length - 1);
+    }
+  } catch (e) {
+    /* no storage available — start fresh */
+  }
+
+  function saveDraft() {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ answers, times, current }));
+    } catch (e) {
+      /* storage full or blocked — the quiz still works, just without a draft */
+    }
+  }
+
+  // Time on the visible question only: paused while the tab is hidden.
+  let shownAt = performance.now();
+  function stopClock() {
+    const q = questions[current];
+    if (!q || shownAt === null) return;
+    times[q.id] = (times[q.id] || 0) + (performance.now() - shownAt) / 1000;
+    shownAt = null;
+  }
+  function startClock() {
+    shownAt = performance.now();
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      stopClock();
+      collectCurrentAnswer();
+      saveDraft();
+    } else {
+      startClock();
+    }
+  });
 
   const mount = document.getElementById("question-mount");
   const counter = document.getElementById("quiz-counter");
@@ -449,52 +493,100 @@
     if (getter) answers[q.id] = getter();
   }
 
+  function saveOffline(body) {
+    const app = window.TEACHX || {};
+    const saved = app.outbox && app.outbox.add({ url: CONFIG.submitUrl, body, savedAt: Date.now() });
+    if (!saved) return false;
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch (e) {
+      /* ignore */
+    }
+    mount.innerHTML = "";
+    const card = document.createElement("div");
+    card.className = "panel question-card offline-saved";
+    const title = document.createElement("h2");
+    title.textContent = "📴 " + (I18N.offlineSavedTitle || "Saved offline");
+    const text = document.createElement("p");
+    text.textContent = I18N.offlineSavedBody || "Your answers are saved on this device and will be sent automatically when you are back online.";
+    card.append(title, text);
+    mount.appendChild(card);
+    document.querySelector(".quiz-nav").style.display = "none";
+    if (btnGiveUp) btnGiveUp.style.display = "none";
+    return true;
+  }
+
   async function submitQuiz() {
+    stopClock();
     collectCurrentAnswer();
+    saveDraft();
     btnNext.disabled = true;
     btnPrev.disabled = true;
     btnNext.textContent = I18N.grading || "Grading…";
+    const rounded = {};
+    Object.keys(times).forEach((id) => { rounded[id] = Math.round(times[id] * 10) / 10; });
+    const body = JSON.stringify({ answers, times: rounded });
+
+    if (!navigator.onLine && saveOffline(body)) return;
     try {
-      const res = await fetch(window.QUIZ_CONFIG.submitUrl, {
+      const res = await fetch(CONFIG.submitUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
-        body: JSON.stringify({ answers }),
+        body,
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const result = await res.json();
-      window.location.href = result.redirect || window.QUIZ_CONFIG.resultsUrl;
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+      } catch (e) {
+        /* ignore */
+      }
+      window.location.href = result.redirect || CONFIG.resultsUrl;
     } catch (err) {
+      // A network failure (not a server error) means we're offline: keep the answers for later.
+      if (err instanceof TypeError && saveOffline(body)) return;
       btnNext.disabled = false;
       btnPrev.disabled = false;
       btnNext.textContent = I18N.finish || "Finish →";
+      startClock();
       alert(I18N.submitError || "Could not submit your test — check your connection and try again.");
     }
   }
 
-  btnNext.addEventListener("click", () => {
+  function goTo(index) {
+    stopClock();
     collectCurrentAnswer();
+    current = index;
+    saveDraft();
+    renderQuestion(current);
+    startClock();
+  }
+
+  btnNext.addEventListener("click", () => {
     if (current < questions.length - 1) {
-      current += 1;
-      renderQuestion(current);
+      goTo(current + 1);
     } else {
       submitQuiz();
     }
   });
 
   btnPrev.addEventListener("click", () => {
-    collectCurrentAnswer();
-    if (current > 0) {
-      current -= 1;
-      renderQuestion(current);
-    }
+    if (current > 0) goTo(current - 1);
   });
 
   if (btnGiveUp && giveUpForm) {
     btnGiveUp.addEventListener("click", () => {
       if (window.confirm(I18N.giveUpConfirm || "Abandon this test?")) {
+        try {
+          localStorage.removeItem(DRAFT_KEY);
+        } catch (e) {
+          /* ignore */
+        }
         giveUpForm.submit();
       }
     });
   }
 
-  renderQuestion(0);
+  renderQuestion(current);
+  startClock();
 })();

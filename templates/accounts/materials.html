@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ t.materials_heading }}{% endblock %}
+{% block content %}
+<div class="history-wrap">
+  <h1>📚 {{ t.materials_heading }}</h1>
+  <p class="lead">{{ t.materials_lead }}</p>
+
+  {% if rows %}
+    {% for row in rows %}
+      <a class="panel history-row" href="{% url 'material_detail' row.lecture.id %}">
+        <span class="icon">{{ row.lecture.subject.icon }}</span>
+        <span class="meta">
+          <div class="subj">{{ row.lecture.title }}</div>
+          <div class="date">{{ row.subject_display }} · {{ row.lecture.created_at|date:"d.m.Y" }}</div>
+        </span>
+        <span class="btn btn-ghost">{{ t.materials_read_btn }}</span>
+      </a>
+    {% endfor %}
+  {% else %}
+    <div class="panel empty-state"><p>{{ t.materials_empty }}</p></div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  if (window.TEACHX && TEACHX.prefetch) {
+    TEACHX.prefetch([{% for row in rows %}"{% url 'material_detail' row.lecture.id %}",{% endfor %}]);
+  }
+</script>
+{% endblock %}
