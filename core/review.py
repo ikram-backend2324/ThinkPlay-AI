@@ -91,4 +91,9 @@ def describe_answer(question_type, question_data, submitted_data, t):
     describer = DESCRIBERS.get(question_type)
     if not describer:
         return "(unsupported)", "(unsupported)"
-    return describer(question_data, submitted_data or {}, t)
+    try:
+        return describer(question_data, submitted_data or {}, t)
+    except (AttributeError, KeyError, TypeError, ValueError):
+        # A malformed stored answer (e.g. a list where a dict was expected) was
+        # graded as wrong; show it as unanswered instead of breaking the page.
+        return t["quiz_no_answer"], describer(question_data, {}, t)[1]

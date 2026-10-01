@@ -105,8 +105,11 @@
     titlebar.className = "console-titlebar";
     titlebar.innerHTML =
       '<span class="console-dot red"></span><span class="console-dot yellow"></span>' +
-      '<span class="console-dot green"></span><span class="console-lang">' +
-      (q.data.language || "code") + "</span>";
+      '<span class="console-dot green"></span>';
+    const langLabel = document.createElement("span");
+    langLabel.className = "console-lang";
+    langLabel.textContent = q.data.language || "code"; // comes from the question, not trusted as HTML
+    titlebar.appendChild(langLabel);
     console_.appendChild(titlebar);
 
     const pre = document.createElement("pre");
@@ -171,11 +174,13 @@
     prompt.textContent = q.data.prompt || "";
     container.appendChild(prompt);
 
-    const answer = Number(q.data.answer) || 0;
-    const tolerance = Number(q.data.tolerance) || Math.max(1, Math.abs(answer) * 0.1);
-    const min = q.data.min !== undefined && q.data.min !== null ? Number(q.data.min) : answer - tolerance * 8 - 5;
-    const max = q.data.max !== undefined && q.data.max !== null ? Number(q.data.max) : answer + tolerance * 8 + 5;
-    const startValue = prev && prev.value !== undefined ? prev.value : Math.round((min + max) / 2);
+    // The server computes the range; the answer itself is never sent.
+    const min = Number(q.data.min) || 0;
+    const max = Number(q.data.max) || 100;
+    const hasPrev = prev && prev.value !== undefined;
+    const startValue = hasPrev ? prev.value : Math.round((min + max) / 2);
+    // An untouched slider is "no answer", not the value it happens to start at.
+    let touched = hasPrev;
 
     const row = document.createElement("div");
     row.className = "numeric-row";
@@ -198,10 +203,12 @@
     exact.step = range.step;
 
     range.addEventListener("input", () => {
+      touched = true;
       exact.value = range.value;
       valueDisplay.textContent = range.value + (q.data.unit ? " " + q.data.unit : "");
     });
     exact.addEventListener("input", () => {
+      touched = true;
       range.value = exact.value;
       valueDisplay.textContent = exact.value + (q.data.unit ? " " + q.data.unit : "");
     });
@@ -211,7 +218,7 @@
     container.appendChild(row);
     container.appendChild(valueDisplay);
 
-    return () => ({ value: Number(exact.value) });
+    return () => (touched && exact.value !== "" ? { value: Number(exact.value) } : {});
   }
 
   function renderOrdering(container, q, prev) {
@@ -234,7 +241,12 @@
       const li = document.createElement("li");
       li.className = "order-item";
       li.dataset.itemId = it.id;
-      li.innerHTML = `<span class="handle">⠿</span><span>${it.text}</span>`;
+      const handle = document.createElement("span");
+      handle.className = "handle";
+      handle.textContent = "⠿";
+      const text = document.createElement("span");
+      text.textContent = it.text; // question text is never trusted as HTML
+      li.append(handle, text);
       list.appendChild(li);
     });
     container.appendChild(list);
@@ -252,7 +264,10 @@
     prompt.textContent = q.data.prompt || "";
     container.appendChild(prompt);
 
-    const pairs = q.data.pairs || [];
+    // The server sends the two columns separately; right-hand ids are opaque
+    // tokens, so the pairing can't be read from the page.
+    const lefts = q.data.lefts || [];
+    const rights = q.data.rights || [];
     const prevPairs = (prev && prev.pairs) || {};
 
     const cols = document.createElement("div");
@@ -271,29 +286,29 @@
 
     const targetLists = {};
     const targetSlots = {};
-    shuffle(pairs).forEach((pair) => {
+    shuffle(rights).forEach((right) => {
       const slot = document.createElement("div");
       slot.className = "match-slot";
       const labelEl = document.createElement("div");
       labelEl.className = "match-slot-label";
-      labelEl.textContent = pair.right;
+      labelEl.textContent = right.text;
       const targetList = document.createElement("ul");
       targetList.className = "match-drop";
-      targetList.dataset.pairId = pair.id;
+      targetList.dataset.pairId = right.id;
       targetList.dataset.placeholder = I18N.dropHere || "Drop here";
       slot.appendChild(labelEl);
       slot.appendChild(targetList);
       rightCol.appendChild(slot);
-      targetLists[pair.id] = targetList;
-      targetSlots[pair.id] = slot;
+      targetLists[right.id] = targetList;
+      targetSlots[right.id] = slot;
     });
 
-    shuffle(pairs).forEach((pair) => {
+    shuffle(lefts).forEach((left) => {
       const li = document.createElement("li");
       li.className = "match-item";
-      li.dataset.pairId = pair.id;
-      li.textContent = pair.left;
-      const assignedTo = prevPairs[pair.id];
+      li.dataset.pairId = left.id;
+      li.textContent = left.text;
+      const assignedTo = prevPairs[left.id];
       if (assignedTo && targetLists[assignedTo]) {
         targetLists[assignedTo].appendChild(li);
         targetSlots[assignedTo].classList.add("filled");
@@ -367,7 +382,9 @@
     categories.forEach((cat) => {
       const bucketWrap = document.createElement("div");
       bucketWrap.className = "categorize-bucket";
-      bucketWrap.innerHTML = `<h4>${cat.name}</h4>`;
+      const bucketTitle = document.createElement("h4");
+      bucketTitle.textContent = cat.name;
+      bucketWrap.appendChild(bucketTitle);
       const list = document.createElement("ul");
       list.className = "order-list categorize-drop";
       list.dataset.categoryId = cat.id;

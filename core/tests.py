@@ -219,6 +219,89 @@ class SubmitAndBadgeTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
+class AnswerKeyHidingTests(TestCase):
+    """The quiz page must not contain the answers; grading still works."""
+
+    QUESTIONS = [
+        FILL,
+        CHOICE,
+        {"type": MATCHING, "prompt": "Match", "pairs": [{"id": "a", "left": "France", "right": "Paris"},
+                                                       {"id": "b", "left": "Japan", "right": "Tokyo"}],
+         "explanation": "SECRET-EXPLANATION"},
+        {"type": ORDERING, "prompt": "Order", "items": [{"id": "2", "text": "two"}, {"id": "1", "text": "one"}],
+         "correct_order": ["1", "2"]},
+        {"type": NUMERIC, "prompt": "Right angle?", "answer": 90, "tolerance": 0, "min": 0, "max": 180},
+        {"type": CATEGORIZE, "prompt": "Sort", "categories": [{"id": "c1", "name": "Even"}, {"id": "c2", "name": "Odd"}],
+         "items": [{"id": "i1", "text": "2", "category_id": "c1"}, {"id": "i2", "text": "3", "category_id": "c2"}]},
+        {"type": HOTSPOT_TEXT, "prompt": "Verb", "tokens": [{"id": "t1", "text": "runs"}], "correct_ids": ["t1"]},
+        {"type": CODE_COMPLETE, "prompt": "Loop", "language": "<img src=x onerror=alert(1)>",
+         "code_template": "for i in ___(3): pass", "accepted_answers": ["range"]},
+    ]
+
+    def setUp(self):
+        teacher = make_user("teacher", Profile.ROLE_TEACHER)
+        self.student = make_user("student", Profile.ROLE_STUDENT, created_by=teacher)
+        self.session = make_session(self.student, Subject.objects.get(slug="math"), questions=self.QUESTIONS)
+        self.client.force_login(self.student)
+
+    def page_data(self):
+        html = self.client.get(reverse("quiz_take", args=[self.session.id])).content.decode()
+        start = html.index('id="questions-data" type="application/json">') + len('id="questions-data" type="application/json">')
+        return html, json.loads(html[start:html.index("</script>", start)])
+
+    def test_page_contains_no_answer_key(self):
+        html, data = self.page_data()
+        for secret in ("accepted_answers", "correct_ids", "correct_order", "category_id", "tolerance",
+                       "SECRET-EXPLANATION", '"answer"', '"pairs"'):
+            self.assertNotIn(secret, html, secret)
+        matching = next(q for q in data if q["type"] == MATCHING)["data"]
+        self.assertEqual({r["text"] for r in matching["rights"]}, {"Paris", "Tokyo"})
+        self.assertFalse({r["id"] for r in matching["rights"]} & {"a", "b"})  # right side ids are opaque
+        numeric = next(q for q in data if q["type"] == NUMERIC)["data"]
+        self.assertEqual((numeric["min"], numeric["max"]), (0, 180))
+
+    def test_matching_tokens_are_graded(self):
+        _, data = self.page_data()
+        q = next(q for q in data if q["type"] == MATCHING)
+        token = {r["text"]: r["id"] for r in q["data"]["rights"]}
+        answers = {str(q["id"]): {"pairs": {"a": token["Paris"], "b": token["Tokyo"]}}}
+        self.client.post(reverse("quiz_submit", args=[self.session.id]), json.dumps({"answers": answers}),
+                         content_type="application/json")
+        answer = Question.objects.get(id=q["id"]).answer
+        self.assertTrue(answer.is_correct)
+        self.assertEqual(answer.submitted_data["pairs"], {"a": "a", "b": "b"})
+        review = self.client.get(reverse("quiz_review", args=[self.session.id]))
+        self.assertContains(review, "France → Paris")
+
+    def test_swapped_or_forged_tokens_are_wrong(self):
+        _, data = self.page_data()
+        q = next(q for q in data if q["type"] == MATCHING)
+        token = {r["text"]: r["id"] for r in q["data"]["rights"]}
+        for pairs in ({"a": token["Tokyo"], "b": token["Paris"]}, {"a": "a", "b": "b"}):
+            session = make_session(self.student, Subject.objects.get(slug="math"), questions=self.QUESTIONS)
+            match_q = session.questions.get(type=MATCHING)
+            # tokens are per question, so the ones from the first page don't fit here either
+            self.client.post(reverse("quiz_submit", args=[session.id]),
+                             json.dumps({"answers": {str(match_q.id): {"pairs": pairs}}}),
+                             content_type="application/json")
+            self.assertFalse(Question.objects.get(id=match_q.id).answer.is_correct)
+
+    def test_malformed_answers_do_not_break_review(self):
+        q_ids = [q.id for q in self.session.questions.all()]
+        answers = {str(q_ids[0]): ["not", "a", "dict"], str(q_ids[1]): "x", str(q_ids[2]): {"pairs": ["bad"]}}
+        response = self.client.post(reverse("quiz_submit", args=[self.session.id]), json.dumps({"answers": answers}),
+                                    content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.get(reverse("quiz_review", args=[self.session.id])).status_code, 200)
+
+    def test_numeric_without_bounds_gets_a_range_around_the_answer(self):
+        from core.question_display import client_data
+        data = client_data(1, NUMERIC, {"type": NUMERIC, "prompt": "?", "answer": 42})
+        self.assertNotIn("answer", data)
+        self.assertLess(data["min"], 42)
+        self.assertGreater(data["max"], 42)
+
+
 class LeaderboardTests(TestCase):
     def test_ranking_counts_points_once_per_session(self):
         subject = Subject.objects.get(slug="math")

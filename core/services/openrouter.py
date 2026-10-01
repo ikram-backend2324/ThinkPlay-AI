@@ -239,7 +239,11 @@ def generate_questions(
     GenerationError only when nothing at all could be generated.
     """
     questions = []
-    while len(questions) < count:
+    # A few spare batches cover the occasional malformed question; past that,
+    # stop with what we have instead of calling the model indefinitely.
+    batches_left = -(-count // batch_size) + 2
+    while len(questions) < count and batches_left > 0:
+        batches_left -= 1
         try:
             batch = generate_question_batch(
                 subject_name=subject_name,

@@ -96,7 +96,13 @@ self.addEventListener("fetch", (event) => {
 self.addEventListener("message", (event) => {
   const data = event.data || {};
   if (data.type === "clear-pages") {
-    event.waitUntil(caches.delete(PAGE_CACHE));
+    // Also refresh the offline fallback: the cached copy may show the previous user's name in the menu.
+    event.waitUntil(
+      Promise.all([
+        caches.delete(PAGE_CACHE),
+        caches.open(STATIC_CACHE).then((cache) => cache.add(OFFLINE_URL)).catch(() => null),
+      ])
+    );
   } else if (data.type === "prefetch" && Array.isArray(data.urls)) {
     event.waitUntil(
       Promise.all(

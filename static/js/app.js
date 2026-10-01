@@ -100,10 +100,16 @@
   APP.getCookie = getCookie;
 
   const outboxBanner = document.getElementById("outbox-banner");
-  function showOutboxBanner(html) {
+  function showOutboxBanner(text, linkHref, linkText) {
     if (!outboxBanner) return;
-    outboxBanner.innerHTML = html;
-    outboxBanner.hidden = !html;
+    outboxBanner.textContent = text;
+    if (linkHref) {
+      const a = document.createElement("a");
+      a.href = linkHref;
+      a.textContent = linkText;
+      outboxBanner.append(" ", a);
+    }
+    outboxBanner.hidden = !text;
   }
 
   let flushing = false;
@@ -114,6 +120,7 @@
     flushing = true;
     let lastRedirect = null;
     let sent = 0;
+    let needsLogin = false;
     for (const item of items) {
       try {
         const res = await fetch(item.url, {
@@ -122,6 +129,12 @@
           body: item.body,
           credentials: "same-origin",
         });
+        if (res.redirected) {
+          // Sent to the login page: the session expired. Keep the answers until
+          // the student logs in again — never drop them.
+          needsLogin = true;
+          break;
+        }
         if (res.ok) {
           const data = await res.json().catch(() => ({}));
           lastRedirect = data.redirect || lastRedirect;
@@ -138,8 +151,13 @@
     flushing = false;
     const left = outbox.list().length;
     if (sent) {
-      const link = lastRedirect ? ` <a href="${lastRedirect}">${I18N.outboxView || "View"}</a>` : "";
-      showOutboxBanner(`✅ ${(I18N.outboxSent || "Sent {n} saved test(s).").replace("{n}", sent)}${link}`);
+      showOutboxBanner(
+        `✅ ${(I18N.outboxSent || "Sent {n} saved test(s).").replace("{n}", sent)}`,
+        lastRedirect,
+        I18N.outboxView || "View"
+      );
+    } else if (left && needsLogin) {
+      showOutboxBanner(`🔑 ${(I18N.outboxLogin || "Log in again to send {n} saved test(s).").replace("{n}", left)}`);
     } else if (left) {
       showOutboxBanner(`⏳ ${(I18N.outboxPending || "{n} test(s) waiting to be sent.").replace("{n}", left)}`);
     }

@@ -101,13 +101,8 @@ def teacher_dashboard(request):
         {"test": t, "subject_display": subject_name(t.subject, lang)}
         for t in TeacherTest.objects.filter(teacher=request.user).select_related("subject")
     ]
-    lectures = Lecture.objects.filter(teacher=request.user).select_related("subject")[:5]
     plans = LessonPlan.objects.filter(teacher=request.user)[:5]
-    return render(
-        request,
-        "teacher/dashboard.html",
-        {"roster": roster, "tests": tests, "lectures": lectures, "plans": plans},
-    )
+    return render(request, "teacher/dashboard.html", {"roster": roster, "tests": tests, "plans": plans})
 
 
 @role_required(*TEACHER_ROLES)

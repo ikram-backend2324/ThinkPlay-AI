@@ -25,6 +25,9 @@ ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 # Render terminates TLS at the load balancer and forwards plain HTTP, so
 # trust its proxy header for request.is_secure() / the CSRF check.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# Outside local development, only send the login and CSRF cookies over HTTPS.
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
 CSRF_TRUSTED_ORIGINS = [
     f"https://{host}" for host in ALLOWED_HOSTS if host not in ("*", "")
 ]
@@ -147,7 +150,7 @@ QUESTION_BATCH_SIZE = 8
 
 # Bump to make every browser drop its offline copies (service worker caches)
 # after a deploy that changes cached pages or static files.
-PWA_CACHE_VERSION = os.environ.get("PWA_CACHE_VERSION", "teachx-v1")
+PWA_CACHE_VERSION = os.environ.get("PWA_CACHE_VERSION", "teachx-v2")
 
 # ---------------------------------------------------------------------------
 # Jazzmin — drop-in skin for the Django admin, which is the "admin can do

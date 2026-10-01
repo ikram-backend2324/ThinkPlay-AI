@@ -20,6 +20,7 @@ from core.gamification import BADGES, award_badges, badge_label, clean_seconds, 
 from core.grading import grade_answer
 from core.i18n import DEFAULT_LANGUAGE, LANGUAGE_CODES, get_strings, subject_name
 from core.models import Answer, DIFFICULTY_CODES, Lecture, Profile, Question, Subject, TestSession
+from core.question_display import client_data, server_answer
 from core.question_types import ALL_TYPES, ICONS
 from core.review import describe_answer
 from core.services.openrouter import GenerationError, generate_question_batch
@@ -353,7 +354,10 @@ def quiz_take(request, session_id):
     if session.status == TestSession.STATUS_ABANDONED:
         return redirect("quiz_setup")
 
-    questions = list(session.questions.all().values("id", "order", "type", "data"))
+    questions = [
+        {"id": q.id, "order": q.order, "type": q.type, "data": client_data(q.id, q.type, q.data)}
+        for q in session.questions.all()
+    ]
     return render(
         request,
         "quiz/take.html",
@@ -361,14 +365,22 @@ def quiz_take(request, session_id):
     )
 
 
-@login_required
-@require_POST
-def quiz_submit(request, session_id):
-    session = get_object_or_404(TestSession, id=session_id, user=request.user)
+def _already_finished(session):
+    """The JSON reply for a session that can no longer be submitted, or None."""
     if session.status == TestSession.STATUS_COMPLETED:
         return JsonResponse({"redirect": reverse_lazy("quiz_results", args=[session.id])})
     if session.status == TestSession.STATUS_ABANDONED:
         return JsonResponse({"redirect": reverse_lazy("quiz_setup")})
+    return None
+
+
+@login_required
+@require_POST
+def quiz_submit(request, session_id):
+    session = get_object_or_404(TestSession, id=session_id, user=request.user)
+    done = _already_finished(session)
+    if done:
+        return done
 
     try:
         payload = json.loads(request.body)
@@ -387,6 +399,9 @@ def quiz_submit(request, session_id):
     answer_objs = []
     for question in questions:
         submitted = answers.get(str(question.id), {})
+        if not isinstance(submitted, dict):
+            submitted = {}  # the review page reads it as a dict
+        submitted = server_answer(question.id, question.type, question.data, submitted)
         is_correct = grade_answer(question.type, question.data, submitted)
         seconds = clean_seconds(times.get(str(question.id)))
         earned, bonus = score_answer(question.type, is_correct, seconds)
@@ -398,6 +413,12 @@ def quiz_submit(request, session_id):
         )
 
     with transaction.atomic():
+        # Lock the row and re-check: a double click or the offline outbox can
+        # send the same test twice at once, and only one may grade it.
+        session = TestSession.objects.select_for_update().get(id=session.id)
+        done = _already_finished(session)
+        if done:
+            return done
         Answer.objects.filter(question__session=session).delete()
         Answer.objects.bulk_create(answer_objs)
         session.score = score
