@@ -19,7 +19,10 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.environ.get(
     "SECRET_KEY", "django-insecure-dev-only-2@p^8pc-h7nx#v5^&p6opn@&b7vu&hbn0"
 )
-DEBUG = os.environ.get("DEBUG", "True") == "True"
+# Off unless explicitly enabled: with DEBUG on, any server error shows a page
+# with the traceback, local variables and settings to every visitor. Set
+# DEBUG=True in your local .env for development.
+DEBUG = os.environ.get("DEBUG", "False").strip().lower() in ("1", "true", "yes", "on")
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 
 # Render terminates TLS at the load balancer and forwards plain HTTP, so
@@ -79,9 +82,18 @@ WSGI_APPLICATION = 'smart_test_platform.wsgi.application'
 # Falls back to a local sqlite file with zero setup; on Render, set
 # DATABASE_URL to a Postgres instance's Internal Database URL (the free
 # web service's own disk is ephemeral, so sqlite would lose data on deploy).
+#
+# Render's Postgres hostname ("dpg-...-a") only resolves from a web service in
+# the same region while the database exists. If logins fail with "could not
+# translate host name", the database was deleted/expired (free ones last 30
+# days) or lives in another region: recreate it and update DATABASE_URL.
 DATABASES = {
     'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        # Reuse connections, and drop ones the server closed while idle
+        # instead of failing the next request with an OperationalError.
+        conn_max_age=600,
+        conn_health_checks=True,
     )
 }
 
